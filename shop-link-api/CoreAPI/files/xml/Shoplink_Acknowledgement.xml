@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="urn:kecrpg.com:HANA:PlanToProduce/ShopLinkAcknowledgement">
+  <soapenv:Header />
+  <soapenv:Body>
+    <shop:MT_S_ShopLink_Acknowledgement>
+      <!--1 or more repetitions:-->
+      <RecordSet>
+        <WADOCO>000033413338</WADOCO>
+      </RecordSet>
+    </shop:MT_S_ShopLink_Acknowledgement>
+  </soapenv:Body>
+</soapenv:Envelope>

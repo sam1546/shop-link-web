@@ -1,0 +1,38 @@
+<div [@routerTransition] [hidden]="showSpinner" class="login-page">
+    <div class="row justify-content-md-center">
+        <div class="col-md-4">
+            <img class="user-avatar" src="assets/images/logo.png" width="170px" />
+            <!-- <h1>SHOP LINK</h1> -->
+            <form role="form" [formGroup]="userLogin" (ngSubmit)="onLoggedin()">
+                <div class="form-content">
+                    <div class="form-group">
+                        <input type="text" [(ngModel)]="username" #userId class="form-control input-underline input-lg"
+                            id="" placeholder="User ID" formControlName="username" 
+                            [ngClass]="{ 'is-invalid': f.username.errors }" >
+                        <div *ngIf="submitted && f.username.errors" class="invalid-feedback">
+                            <div *ngIf="f.username.errors.required">User ID is required</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="password" [(ngModel)]="userpassword" #userPassword
+                            class="form-control input-underline input-lg" id="" placeholder="Password"
+                            formControlName="userpassword" [ngClass]="{ 'is-invalid': f.userpassword.errors }">
+                        <div *ngIf="submitted && f.userpassword.errors" class="invalid-feedback">
+                            <div *ngIf="f.userpassword.errors.required">Password is required</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn rounded-btn"> Log in </button>
+                &nbsp;
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<div [hidden]="waitSpinner" class="spinner">
+    <div class="bounce1"></div>
+    <div class="bounce2"></div>
+    <div class="bounce3"></div>
+</div>

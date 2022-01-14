@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="urn:kecrpg.com:HANA:PlanToProduce/ShopLinkWorkCenterAssignment">
+  <soapenv:Header />
+  <soapenv:Body>
+    <shop:MT_WorkCenterAssignment>
+      <!--1 or more repetitions:-->
+      <RecordSet>
+        <WADOCO>110000000687</WADOCO>
+        <IROPNO>10</IROPNO>
+        <Machine>IWC2</Machine>
+      </RecordSet>
+     </shop:MT_WorkCenterAssignment>
+  </soapenv:Body>
+</soapenv:Envelope>

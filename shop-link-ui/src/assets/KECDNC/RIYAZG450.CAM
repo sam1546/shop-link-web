@@ -1,0 +1,192 @@
+; STEEL PROJECTS France - CAM version 2.00
+_PIECE_
+[HEAD]
+COM_NAM:RIYAZ
+NUM_COM:RIYAZ
+COM_DES:
+DES_COM:
+COM_OBJ:
+OGG_COM:
+COM_CLI:ppdjaipur
+CLI_COM:
+COM_CRE:
+COM_FIN:
+DAT_COM:
+COM_TRT:
+COM_MAT:
+COM_PNT:
+COM_TIM:
+COM_PDS:100
+COM_PRX:100
+COM_SRF:100
+COM_TPS:100
+COM_USI:100
+COM_TYP:
+COM_PRE:
+COM_TRTB:
+COM_FAM:
+COM_CLA:
+COM_RP_DEB:0
+COM_RP_FIN:0
+COM_RP_SEP:
+COM_RP_SEQ:
+COM_RP_FLG:0
+COM_RS_DEB1:0
+COM_RS_FIN1:0
+COM_RS_DEB2:0
+COM_RS_FIN2:0
+COM_RS_SEP:
+COM_RS_SEQ:
+COM_RS_FLG:0
+COM_RES:
+COM_UNI:0
+DWG_NAM:DD
+NUM_DIS:DD
+DWG_DES:
+DES_DIS:
+DWG_RES:
+NOM_DIS:
+DWG_CRE:
+DWG_TRT:
+DWG_MAT:
+DWG_PNT:
+DWG_TIM:
+DWG_FIC:
+DWG_FMT:
+DWG_ECH:
+DWG_SEQRP:
+DWG_SEQRS:
+DWG_TYP:
+DWG_PRE:
+DWG_TRTB:
+DWG_FAM:
+DWG_CLA:
+DWG_CON:0
+DWG_TOL:0
+DWG_LIV:
+ASS_NAM:
+MAR_PEZ:
+ASS_QTY:
+QTA_MAR:
+ASS_DES:
+DES_MAR:
+ASS_PRI:
+PRI_MAR:
+ASS_TRT:
+TRA_MAR:
+ASS_MAT:
+ASS_PNT:
+ASS_FIC:
+ASS_FMT:
+ASS_TYP:
+TIP_PEZ:
+ASS_ENC:
+ING_PEZ:
+ASS_DATC:
+ASS_TIMC:
+ASS_DATM:
+ASS_TIMM:
+ASS_ECH:
+ASS_MOD:
+ASS_SEQ:
+ASS_MAN:0
+PCE_NAM:RIYAZG450
+POS_PEZ:RIYAZG450
+PCE_WGH:
+PUN_LIS:
+PCE_SUR:
+SUN_LIS:
+PCE_QTY:
+QTA_PEZ:
+PCE_DES:
+DES_PEZ:
+PCE_CMT1:
+NOT_PEZ:
+PCE_CMT2:
+PCE_CMT3:
+PCE_GRP:ANGLE
+GRP_PEZ:ANGLE
+PCE_PRF:150X15X15
+NOM_PRO:150X15X15
+PCE_CAT:D
+TIP_PRO:D
+PCE_LEN:411
+LUN_PRO:411
+PCE_WDT:
+LAR_PRO:
+PCE_THK:
+SPE_PRO:
+PCE_TRT:
+TRA_PEZ:
+PCE_MAT:HT
+MAT_PRO:HT
+PCE_PNT:
+PCE_APP:
+COD_PEZ:
+PCE_DATC://
+PCE_TIMC:
+PCE_DATM:
+PCE_TIMM:
+PCE_MOD:
+PCE_FIC:
+PCE_FMT:
+PCE_ECH:
+PCE_UNI:0
+PCE_MAN:0
+MAT_DES:HIGH TENSILE STEEL
+MAT_DENS:7.85
+TRT_DES:
+TRT_UNI:0
+TRT_PRX:0.00
+PNT_THK:0.00
+PRF_UNI:0
+PRF_DES:ANGLE
+COM_SRC:
+[SHAPE]
+D 4 0
+       150.00      15.00        0.00        15.00        15.00        0.00
+        0.00      0.00      0.00      0.00      0.00      0.00      0.00
+     411.00       0.00      15.00     0.00      0.00      0.00
+        0.00      0.00      0.00      0.00      0.00      0.00      0.00
+[OUTLINE]
+LIV1
+     0.00      0.00      0.00
+   411.00      0.00      0.00
+   411.00     -15.00      0.00
+     0.00     -150.00      0.00
+LIV2
+      0.00      0.00      -150.00
+   411.00      0.00      -15.00
+   411.00      0.00      0.00
+      0.00      0.00      0.00
+[HOLE]
+LIV1
+H 17.50      25.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      50.00      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      75.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      100.00      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      125.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      150.00      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      175.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      203.50      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      231.50      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      260.00      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      340.50      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      345.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      380.50      -70.00      0.00      0.00     0.00    0.00     0.00 0
+H 17.50      385.00      -125.00      0.00      0.00     0.00    0.00     0.00 0
+LIV2
+H 17.50      35.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+H 17.50      70.00     0.00     -125.00      0.00      0.00     0.00       0.00 0
+H 17.50      105.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+H 17.50      140.00     0.00     -125.00      0.00      0.00     0.00       0.00 0
+H 17.50      175.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+H 17.50      210.00     0.00     -125.00      0.00      0.00     0.00       0.00 0
+H 17.50      245.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+H 17.50      280.00     0.00     -125.00      0.00      0.00     0.00       0.00 0
+H 17.50      315.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+H 17.50      350.00     0.00     -125.00      0.00      0.00     0.00       0.00 0
+H 17.50      385.00     0.00     -70.00      0.00      0.00     0.00       0.00 0
+[MARK]
+LIV1
+100.00      0.00       0.00      0.00  RIYAZG450,0.0

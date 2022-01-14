@@ -1,0 +1,17 @@
+<shop:MT_WorkCenterAssignment xmlns:shop="urn:kecrpg.com:HANA:PlanToProduce/ShopLinkWorkCenterAssignment" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <RecordSet>
+    <WADOCO>110000000448</WADOCO>
+    <IROPNO>10</IROPNO>
+    <Machine>CP-03</Machine>
+  </RecordSet>
+  <RecordSet>
+    <WADOCO>110000000448</WADOCO>
+    <IROPNO>40</IROPNO>
+    <Machine>CP-03</Machine>
+  </RecordSet>
+  <RecordSet>
+    <WADOCO>110000000448</WADOCO>
+    <IROPNO>50</IROPNO>
+    <Machine>CP-03</Machine>
+  </RecordSet>
+</shop:MT_WorkCenterAssignment>

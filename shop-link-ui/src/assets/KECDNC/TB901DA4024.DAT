@@ -1,0 +1,51 @@
+Affaire  : CP-17912A
+Plan     : TB90100107
+Repere   : TB901DA4024
+Profil   : MAE250A70X70X4
+Longueur : 3497.000 
+Qaf      : 30.000 
+Qtf      : 0
+Etat     : 0
+Origine  : 
+
+Debut Profil
+Forme    : L
+Largeur  : 0.000 
+Hauteur  : 0.000 
+Epame    : 0.000 
+Epaile   : 0.000 
+Fin Profil 
+
+Debut Percage
+1,1200.0,20.0,17.5,T
+1,2200.0,20.0,17.5,T
+1,3400.0,20.0,17.5,T
+Fin Percage
+
+Debut Coupe
+0.00
+-0.00
+0.00
+-0.00
+Fin Coupe
+
+Debut Macro
+Fin Macro
+
+Debut Contour
+Fin Contour
+
+Debut Info
+Commentaire :
+Norme       : 0
+Next        :
+Fin Info
+
+Debut Grugeage
+Fin Grugeage
+
+Debut Barre
+Fin Barre
+[MARK]
+LIV1
+0      0       0.00      0.00  TB901DA4024,0.0

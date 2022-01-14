@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:smar="urn:kecrpg.com:HANA:PlanToProduce/SMARTCAMProductionOrder">
+  <soapenv:Header />
+  <soapenv:Body>
+    <smar:MT_S_Request_SMARTCAM>
+      <WADOCO>12345</WADOCO>
+    </smar:MT_S_Request_SMARTCAM>
+  </soapenv:Body>
+</soapenv:Envelope>

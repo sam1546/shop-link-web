@@ -1,0 +1,24 @@
+<SOAP:Envelope xmlns:SOAP='http://schemas.xmlsoap.org/soap/envelope/'><SOAP:Header/>
+<SOAP:Body xmlns:smar='urn:kecrpg.com:HANA:PlanToProduce/SMARTCAMProductionOrder'>
+    <ns0:MT_R_Response_SMARTCAM xmlns:ns0='urn:kecrpg.com:HANA:PlanToProduce/SMARTCAMProductionOrder'>
+        <WADOCO>000033433483</WADOCO>
+        <WALITM>S804D911</WALITM>
+        <WAUORG>8.000 </WAUORG>
+        <IXLITM>HA355JO65X65X5</IXLITM>
+        <WAMMCU/>
+        <IXY55RML>3785.000 </IXY55RML>
+        <WAITM/>
+        <WAVR01>0S804-00869</WAVR01>
+        <IXITM/>
+        <IXY55RMB>0.000 </IXY55RMB>
+        <IXSEG2>HTA</IXSEG2>
+        <IXMMCU/>
+        <IXKIT/>
+        <IMSEG4>65.000 </IMSEG4>
+        <IMSEG5>65.000 </IMSEG5>
+        <IMSEG6>5.000 </IMSEG6>
+        <IMITM/>
+        <FGMARK>HS804D911</FGMARK>
+    </ns0:MT_R_Response_SMARTCAM>
+</SOAP:Body>
+</SOAP:Envelope>

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="urn:kecrpg.com:HANA:PlanToProduce/ShopLinkProductionConfirmation">
+  <soapenv:Header />
+  <soapenv:Body>
+    <shop:MT_ProductionConfirmation>
+      <!--1 or more repetitions:-->
+      <RecordSet>
+        <WADOCO>000033212466</WADOCO>
+        <IROPNO>10</IROPNO>
+        <SHIFT>First</SHIFT>
+      </RecordSet>
+    </shop:MT_ProductionConfirmation>
+  </soapenv:Body>
+</soapenv:Envelope>

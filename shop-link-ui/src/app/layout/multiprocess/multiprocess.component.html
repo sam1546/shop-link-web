@@ -1,0 +1,183 @@
+<div [@routerTransition]>
+
+    <div class="row">
+        <div class="col-lg-4"> 
+            <br /><br /> <br />
+            <div class="container" style="background-color: #F4F5F1; font-size: 12px; height: 500px; border: 1px solid #d7e4b2;">
+                <div class="row">
+                    
+                </div> 
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <br /><br />
+            <div class="container my-4">
+                <form>
+                    <div class="form-group row">
+                        <div class="col-sm-12 text-center">
+                            <h4 class="fw-bold">Multi Process</h4>
+                        </div>
+                    </div>
+                    <hr />
+
+                    <div class="form-group row"  style=" background-color: #F4F5F1; font-size: 12px; height: 50px; border: 1px solid #d7e4b2;">
+                        <div class="col-sm-1" style="margin-top: 10px;">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i
+                                    class="fa fa-reply"></i>
+                                Rev.PO</button>&nbsp;
+                        </div>
+                        <div class="col-sm-1" style="margin-top: 10px;">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-danger" type="button"><i
+                                    class="fa fa-refresh"></i>
+                                Refresh</button> &nbsp;
+                        </div>
+                        <div class="col-sm-1" style="margin-top: 10px;">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i
+                                    class="fa fa-tasks"></i>
+                                Clear</button>&nbsp;
+                        </div>
+                        <div class="col-sm-1" style="margin-top: 10px;">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i
+                                    class="fa fa-trash-o"></i>
+                                Delete</button>
+                        </div>
+                        <div class="col-sm-2" style="margin-top: 10px;">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i
+                                    class="fa fa-reply"></i>
+                                Rev. MIR</button>
+                        </div>
+                    </div> 
+                    <div class="form-group row" style="font-size: 14px;">
+                        <div class="col-sm-4">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button"> <i
+                                    class="fa fa-pencil"></i>
+                                CNC Primary Mass Updation(GI)</button>&nbsp;
+                        </div>
+                        <div class="col-sm-4">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button"><i
+                                    class="fa fa-pencil"></i>
+                                CNC Secondary Mass Updation</button> &nbsp;
+                        </div>
+                    </div>
+                    <div class="form-group row" style="font-size: 14px;">
+                        <div class="col-sm-4">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button"> <i
+                                    class="fa fa-check"></i>
+                                IWC Completion(GI)</button>&nbsp;
+                        </div>
+                        <div class="col-sm-4">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button"><i
+                                    class="fa fa-check"></i>
+                                IWC Fabrication Completion</button> &nbsp;
+                        </div>
+                    </div>
+                    <hr/>
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="form-row" style="font-size: 14px;">
+                                <label for="lblWendingworkCenter" class="col-sm-4 col-form-label">Select Wending
+                                    WorkCenter</label>
+                                <div class="col-sm-4">
+                                    <select class="custom-select custom-select-sm" id="ddlWendingworkCenter"
+                                        style="width: 120px; width: 80%;">
+                                        <option value="null">--Select--</option>
+                                        <!-- <option class='option' *ngFor='let option of groups' [value]="option.groupId">
+                                            {{option.groupId}}
+                                        </option> -->
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil-square-o"></i>
+                                        Wending WC Assignment</button> &nbsp;
+                                </div>
+                            </div>
+                            <div class="form-row" style="font-size: 14px;">
+                                <label for="lblGalavaworkCenter" class="col-sm-4 col-form-label">Select Galva
+                                    WorkCenter</label>
+                                <div class="col-sm-4">
+                                    <select class="custom-select custom-select-sm" id="ddlGalavaworkCenter"
+                                        style="width: 120px; width: 80%;">
+                                        <option value="null">--Select--</option>
+                                        <!-- <option class='option' *ngFor='let option of groups' [value]="option.groupId">
+                                            {{option.groupId}}
+                                        </option> -->
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil-square-o"></i>
+                                        Galava WC Assignment</button> &nbsp;
+                                </div>
+                            </div>
+                            <div class="form-row" style="font-size: 14px;">
+                                <label for="lblEnamelworkCenter" class="col-sm-4 col-form-label">Select Enamel
+                                    WorkCenter</label>
+                                <div class="col-sm-4">
+                                    <select class="custom-select custom-select-sm" id="ddlEnamelworkCenter"
+                                        style="width: 120px; width: 80%;">
+                                        <option value="null">--Select--</option>
+                                        <!-- <option class='option' *ngFor='let option of groups' [value]="option.groupId">
+                                            {{option.groupId}}
+                                        </option> -->
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil-square-o"></i>
+                                        Enamel WC Assignment</button> &nbsp;
+                                </div>
+                            </div>
+                            <div class="form-row" style="font-size: 14px;">
+                                <label for="lblPaintingworkCenter" class="col-sm-4 col-form-label">Select Painting
+                                    WorkCenter</label>
+                                <div class="col-sm-4">
+                                    <select class="custom-select custom-select-sm" id="ddlPaintingworkCenter"
+                                        style="width: 120px; width: 80%;">
+                                        <option value="null">--Select--</option>
+                                        <!-- <option class='option' *ngFor='let option of groups' [value]="option.groupId">
+                                            {{option.groupId}}
+                                        </option> -->
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil-square-o"></i>
+                                        Enamel Painting Assignment</button> &nbsp;
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="form-row" style="font-size: 14px;">
+                                <div class="col-sm-3">
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil"></i>
+                                        Wending Mass Update</button> &nbsp;
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil"></i>
+                                        Galva Mass Update</button> &nbsp;
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil"></i>
+                                        Enamel Mass Update</button> &nbsp;
+                                    <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md"
+                                        type="button"><i class="fa fa-pencil"></i>
+                                        Painting Mass Update</button> &nbsp;
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <hr />
+                </form>
+
+            </div>
+        </div>
+
+
+    </div>
+
+
+
+
+</div>

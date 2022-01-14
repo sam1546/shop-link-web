@@ -1,0 +1,242 @@
+<div [@routerTransition]>
+    <div class="row">
+        <div class="col-lg-8">
+            <br /><br />
+            <!-- <div class="card card-default mb-3">
+                <div class="card-header"><i class="fa fa-tasks fa-fw"></i> Insert Parameter</div>
+            </div> -->
+            <div class="container my-4">
+                <form>
+                    <div class="form-group row">
+                        <div class="col-sm-12 text-center">
+                            <h4 class="fw-bold">Shop Floor Panning Acknowledgement</h4>
+                        </div>
+                    </div>
+                    <hr />
+
+                    <div class="form-group row" style="font-size: 14px;">
+                        <label for="lblAckIMR" class="col-sm-2 col-form-label">Ack.MIR</label>
+                        <div class="col-sm-2">
+                            <input type="text" placeholder="Ack.MIR" (keyup.enter)="onEnter()" class="btn-sm form-control" [(ngModel)]="txtAckMirno" id="txtAckMirno" />
+                        </div>
+                        <div class="col-sm-2">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-danger" type="button" (click)="findDB()"><i
+                                    class="fa fa-search"></i>
+                                Search</button> &nbsp;
+                        </div>
+                        <div class="col-sm-2">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i class="fa fa-tasks"></i>
+                                ACK.MIR</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i class="fa fa-edit"></i>
+                                ACK.PO</button>
+                        </div>
+                    </div>
+
+
+                    <div class="form-row"  style="font-size: 14px;">
+                        <div class="col-md-2 mb-3">
+                            <label for="validationCustom01">Plan MIR </label>
+                            <input type="text" class="form-control btn-sm" id="validationCustom01"
+                                placeholder="Plan MIR">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="validationCustom01">Group </label>
+                            <select class="custom-select custom-select-sm" [(ngModel)]='optionSelectedGroup'
+                                [ngModelOptions]="{standalone: true}"
+                                (ngModelChange)='onOptionsSelectedGroup($event)' id="ddlSectionTypeGroup"
+                                style="width: 120px;">
+                                <option value="null">--Select--</option>  
+                                <option class='option' *ngFor='let option of groups' [value]="option.groupId">
+                                    {{option.groupId}}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="validationCustom001">Work Center </label>
+                            <select class="custom-select custom-select-sm" [(ngModel)]='optionSelectedWorkCenter'
+                                [ngModelOptions]="{standalone: true}"
+                                (ngModelChange)='onOptionsSelectedWorkCenter($event)' id="ddlSectionTypeWorkCenter"
+                                style="width: 100px;">
+                                <option value="null">--Select--</option>  
+                                <option class='option' *ngFor='let option of workCenter' [ngValue]="option.workCenterCode">
+                                    {{option.workCenterCode}} 
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="validationCustom0001">Shift</label>
+                            <select class="custom-select custom-select-sm" [(ngModel)]='optionSelectedShift'
+                                [ngModelOptions]="{standalone: true}"
+                                (ngModelChange)='onOptionsSelectedShift($event)' id="ddlSectionType"
+                                style="width: 120px;">
+                                <option value="null">--Select--</option>  
+                                <option class='option' *ngFor='let option of SECTION_TYPE' [value]="option">
+                                    {{option}}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="validationCustom0001"></label>
+                            <div class="text-center">
+                                <button type="submit" id="btnAssign" style="font-size: 12px;" 
+                                    class="btn btn-sm btn-secondary btn-md"><i
+                                    class="fa fa-pencil-square-o"></i>Assign</button>
+                                &nbsp;&nbsp;
+                                <button type="submit" id="btnMassUpdate"  style="font-size: 12px;" 
+                                    class="btn btn-sm btn-secondary btn-md"><i
+                                    class="fa fa-pencil"></i>Mass Update</button>
+                                &nbsp;&nbsp;
+                                <button type="submit" id="btnMIR"  style="font-size: 12px;" 
+                                    class="btn btn-sm btn-secondary btn-md"><i
+                                    class="fa fa-trash"></i>Delete MIR</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <hr />
+                </form>
+                
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- <div class="card card-default mb-3">
+                <div class="card-header"><i class="fa fa-tasks fa-fw"></i> DNC</div>
+            </div> -->
+            <br /><br /> <br />
+
+            <div class="container" style="background-color: #F4F5F1; font-size: 12px;" >
+                <div class="row">
+                    <div class="col">
+                        <div class="row">
+                            <div class="col">
+                                <input type="text" class="form-control form-control-sm" id="txtweightinton" [(ngModel)]="txtweightinton" />
+                            </div>
+                            <div class="col">
+                                <label for="lblweightinton" class="col-form-label">Weight(in Ton)</label>
+                            </div>
+                            <div class="col">
+                                <input type="text" class="btn-sm form-control" id="txttotalsetup" [(ngModel)]="txttotalsetup" />
+                            </div>
+                            <div class="col">
+                                <label for="lbltotalsetup" class="col-form-label">Total Setup</label>
+                            </div>
+                        </div> 
+                        <div class="row">
+                            <div class="col">
+                                <input type="text" class="btn-sm form-control" id="txttotaloptions" [(ngModel)]="txttotaloptions" />
+                            </div>
+                            <div class="col">
+                                <label for="lbltotaloptions" class="col-form-label">Total Optns</label>
+                            </div>
+                            <div class="col">
+                                <input type="text" class="btn-sm form-control" id="txttheortime" [(ngModel)]="txttheortime" />
+                            </div>
+                            <div class="col">
+                                <label for="lbltheortime" class="col-form-label">Theor.Runtime</label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>&nbsp;
+                <div class="row" >
+                    <div class="col">
+                        <div class="row">
+                            <div class="col-4">
+                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                        class="fa fa-desktop"></i>
+                                    Main Screen</button>
+                            </div>
+                            <div class="col-4">
+                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                        class="fa fa-upload"></i>
+                                    WC Load</button>
+                            </div>
+                        </div> &nbsp;
+                        <div class="row">
+                            <div class="col-4">
+                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                        class="fa fa-window-restore"></i>
+                                    Bal.Punch MIR</button>
+                            </div>
+                            <div class="col-4">
+                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                        class="fa fa-window-maximize"></i>
+                                    Bal_Allocate</button>
+                            </div>
+                        </div> &nbsp;
+                        <div class="row">
+                            <div class="col-4">
+                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" style="height: 25px ;" type="button"><i
+                                        class="fa fa-trash"></i>
+                                    Delete MIR</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+        </div>
+    </div>
+    <div class="row"> 
+        <div class="col-lg-12" >
+        <table class="table table-bordered" id="tbldata"> 
+            <thead style="background-color: #F4F5F1; font-size: 12px;">
+                <tr class="text-center">
+                    <th>PO.NO.</th>
+                    <th>Item No</th>
+                    <th>MIR No</th>
+                    <th>WorkCenter</th>
+                    <th>Section</th>
+                    <th>OPStatus</th> 
+                    <th>Billable Lot</th> 
+                    <th>QTY</th> 
+                    <th>Length</th> 
+                    <th>Wt./Pcs.</th> 
+                    <!-- <th>Diameter</th> 
+                    <th>Pulled Date</th>  -->
+                    <th>Released Date</th>
+                    <th>Total Wt</th>
+                    <th>Rack Details</th>
+                    <th>OPR/PCs</th> 
+                    <th>Tot OPS</th>
+                    <th>Planning Shift</th>
+                    <th>Planning Date</th>
+                    <th>RunTime</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody *ngIf="pddetails.length>0" style="font-size: 12px;"> 
+                <tr *ngFor="let item of pddetails" class="text-center">
+                    <td>{{item.rsNo}}</td>
+                    <td >{{item.item_No}}</td>
+                    <td >{{item.mirNo}}</td>
+                    <td >{{item.workCenter}}</td>
+                    <td >{{item.section}}</td>
+                    <td >{{item.opStatus}}</td>
+                    <td >{{item.billable_Lot}}</td>
+                    <td >{{item.qty}}</td>
+                    <td >{{item.length}}</td>
+                    <td >{{item.wt_Pcs}}</td>
+                    <!-- <td >{{item.diameter}}</td>
+                    <td >{{item.pulledDate}}</td> -->
+                    <td >{{item.releasedDate}}</td> 
+                    <td >{{item.totalWt}}</td> 
+                    <td >{{item.rackDetails}}</td> 
+                    <td >{{item.oprpCs}}</td> 
+                    <td >{{item.tot_OPS}}</td> 
+                    <td >{{item.planningShift}}</td> 
+                    <td >{{item.planningDate}}</td> 
+                    <td >{{item.runTime}}</td> 
+                    <td >{{item.status}}</td> 
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        
+    </div>
+
+</div>
+ 

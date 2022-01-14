@@ -1,0 +1,1 @@
+{"ast":null,"code":"//Local app Url\nexport var localAppUrl = \"http://localhost:4200/#/\"; //server api urls\n\nexport var devApiUrl = \"http://localhost:16882/api/\";","map":null,"metadata":{},"sourceType":"module"}

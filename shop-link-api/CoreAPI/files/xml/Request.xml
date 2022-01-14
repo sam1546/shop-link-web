@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="urn:kecrpg.com:HANA:PlanToProduce/ShopLinkMIRinformation">
+  <soapenv:Header />
+  <soapenv:Body>
+    <shop:MT_S_Request_MIRInformation>
+      <WADOCO>41086672</WADOCO>
+      <WAMMCU>TM03</WAMMCU>
+    </shop:MT_S_Request_MIRInformation>
+  </soapenv:Body>
+</soapenv:Envelope>
