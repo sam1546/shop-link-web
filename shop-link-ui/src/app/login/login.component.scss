@@ -1,4 +1,4 @@
-$topnav-background-color: #12366A;
+$topnav-background-color: #12366A;  // #12366A
 :host {
     display: block;
 }
@@ -37,7 +37,7 @@ $topnav-background-color: #12366A;
     }
 
     .input-underline:focus {
-        border-bottom: 2px solid #fff;
+        border-bottom: 2px solid rgb(194, 49, 73);
         box-shadow: none;
     }
 

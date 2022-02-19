@@ -16,7 +16,7 @@ export class UsermasterService {
   }
   public UserLogin(userId: string, userPassword): Observable<any> {
     try {
-      return this.httpd.get(glob.devApiUrl + "Login/User", { params: { UserId: userId, UserPassword: userPassword } })
+      return this.httpd.get(glob.apiUrl + "Login/User", { params: { UserId: userId, UserPassword: userPassword } })
         .pipe(map((response: any) => {
           return response.json();
         })

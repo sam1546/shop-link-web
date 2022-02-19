@@ -9,7 +9,7 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class HeaderComponent implements OnInit {
     public pushRightClass: string;
-    loggedInUserName =''
+    loggedInUserName = ''
     constructor(private translate: TranslateService, public router: Router) {
         this.router.events.subscribe((val) => {
             if (val instanceof NavigationEnd && window.innerWidth <= 992 && this.isToggled()) {
@@ -20,8 +20,8 @@ export class HeaderComponent implements OnInit {
 
     ngOnInit() {
         this.pushRightClass = 'push-right';
-        this.loggedInUserName = localStorage.getItem('userName');   
-        
+        this.loggedInUserName = localStorage.getItem('userName');
+
     }
 
     isToggled(): boolean {
@@ -40,7 +40,15 @@ export class HeaderComponent implements OnInit {
     }
 
     onLoggedout() {
-        localStorage.removeItem('isLoggedin');
+        // localStorage.removeItem('isLoggedin');
+        localStorage.setItem('isLoggedin', 'false');
+        localStorage.setItem('userName', '');
+        localStorage.setItem('role', '')
+        localStorage.setItem('plantcode', '');
+        localStorage.setItem('plantAddress', '');
+        localStorage.setItem('department', '');
+
+        this.router.navigate(['/login']);
     }
 
     changeLang(language: string) {

@@ -11,35 +11,41 @@
                         <div class="col-sm-12 text-center">
                             <h4 class="fw-bold">Shop Floor Panning Acknowledgement</h4>
                         </div>
-                    </div>
-                    <hr />
+                    </div> 
 
                     <div class="form-group row" style="font-size: 14px;">
                         <label for="lblAckIMR" class="col-sm-2 col-form-label">Ack.MIR</label>
                         <div class="col-sm-2">
-                            <input type="text" placeholder="Ack.MIR" (keyup.enter)="onEnter()" class="btn-sm form-control" [(ngModel)]="txtAckMirno" id="txtAckMirno" />
+                            <input type="text" placeholder="Ack.MIR" (keyup.enter)="onEnter()" class="btn-sm form-control"
+                                [(ngModel)]="txtAckMirno" id="txtAckMirno" />
                         </div>
-                        <div class="col-sm-2">
-                            <button style="font-size: 12px;" class="btn btn-sm btn-danger" type="button" (click)="findDB()"><i
+                        <div class="col-sm-4">
+                            <button style="font-size: 12px;" class="btn btn-sm btn-danger" type="button" (click)="onSearchClick()"><i
                                     class="fa fa-search"></i>
                                 Search</button> &nbsp;
-                        </div>
-                        <div class="col-sm-2">
-                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i class="fa fa-tasks"></i>
-                                ACK.MIR</button>
-                        </div>
-                        <div class="col-sm-2">
-                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i class="fa fa-edit"></i>
+                            <!-- </div>
+                                            <div class="col-sm-2"> -->
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button" (click)="onAckmirClick()"> <i
+                                    class="fa fa-tasks"></i>
+                                ACK.MIR</button>&nbsp;
+                            <!-- </div>
+                                            <div class="col-sm-2"> -->
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button" (click)="onAckPOclick()"> <i
+                                    class="fa fa-edit"></i>
                                 ACK.PO</button>
                         </div>
+                        <div class="col-sm-4">
+                            <label><input type="radio" name="optradio" [checked]="rdrFicep" (click)="onRadiobuttonClick(1)" > Ficep</label>&nbsp;
+                            <label><input type="radio" name="optradio" [checked]="rdrVernet" (click)="onRadiobuttonClick(2)"> Vernet</label>&nbsp;
+                            <label><input type="radio" name="optradio" [checked]="rdrDrilling"  (click)="onRadiobuttonClick(3)"> Drilling</label> 
+                        </div>
                     </div>
-
-
+                     
                     <div class="form-row"  style="font-size: 14px;">
                         <div class="col-md-2 mb-3">
                             <label for="validationCustom01">Plan MIR </label>
                             <input type="text" class="form-control btn-sm" id="validationCustom01"
-                                placeholder="Plan MIR">
+                                placeholder="Plan MIR" (keyup.enter)="onEnterPlanMIR()" >
                         </div>
                         <div class="col-md-2 mb-3">
                             <label for="validationCustom01">Group </label>
@@ -80,23 +86,48 @@
                         <div class="col-md-4 mb-3">
                             <label for="validationCustom0001"></label>
                             <div class="text-center">
-                                <button type="submit" id="btnAssign" style="font-size: 12px;" 
+                                <button type="button" id="btnAssign" (click)="onAssignClick()" style="font-size: 12px;" 
                                     class="btn btn-sm btn-secondary btn-md"><i
-                                    class="fa fa-pencil-square-o"></i>Assign</button>
+                                    class="fa fa-pencil-square-o" ></i>Assign</button>
                                 &nbsp;&nbsp;
-                                <button type="submit" id="btnMassUpdate"  style="font-size: 12px;" 
+                                <button type="button" id="btnMassUpdate" (click)="onMassUpdateClick()" style="font-size: 12px;" 
                                     class="btn btn-sm btn-secondary btn-md"><i
-                                    class="fa fa-pencil"></i>Mass Update</button>
-                                &nbsp;&nbsp;
-                                <button type="submit" id="btnMIR"  style="font-size: 12px;" 
-                                    class="btn btn-sm btn-secondary btn-md"><i
-                                    class="fa fa-trash"></i>Delete MIR</button>
+                                    class="fa fa-pencil" ></i>Mass Update</button>
+                                &nbsp;&nbsp; 
+
+                                <button type="button" id="btnMIRDelete" (click)="onDeleteMIRClick()" style="font-size: 12px;" 
+                                class="btn btn-sm btn-secondary btn-md"><i
+                                class="fa fa-trash" ></i>Delete MIR</button>
+                                
                             </div>
                         </div>
 
                     </div>
 
-                    <hr />
+
+                    <div class="form-group row" style="background-color: #F4F5F1; height: 35px; font-size: 14px; border: 1px solid #d7e4b2;">
+                        <div class="col-sm-4">
+                            <label><input type="radio" name="radioButton1" [checked]="radioButton1" (click)="radioButton1Click(1)" > In Process WIP</label>&nbsp;
+                            <label><input type="radio" name="radioButton1" [checked]="radioButton2" (click)="radioButton1Click(2)"> Incom. Quantity</label>&nbsp; 
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="date" id="start" name="trip-start">
+                             &nbsp; &nbsp; 
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onExportToExcelClick()"> 
+                                     <i class="fa fa-file-excel-o"></i> 
+                                Export To Excel</button> &nbsp; 
+                                &nbsp; <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onShop1()"> <i
+                                    class="fa fa-desktop"></i>
+                                Shop 1</button> &nbsp;  &nbsp; 
+
+                            <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onButton1click()"> <i
+                                    class="fa fa-desktop"></i>
+                                IWC (Shop 2-11)</button>
+                        </div>
+                       
+                    </div>
+
+                    <hr/>
                 </form>
                 
             </div>
@@ -108,18 +139,18 @@
             </div> -->
             <br /><br /> <br />
 
-            <div class="container" style="background-color: #F4F5F1; font-size: 12px;" >
+            <div class="container" style="background-color: #F4F5F1; font-size: 12px; border: 1px solid #d7e4b2;" >
                 <div class="row">
                     <div class="col">
                         <div class="row">
                             <div class="col">
-                                <input type="text" class="form-control form-control-sm" id="txtweightinton" [(ngModel)]="txtweightinton" />
+                                <input type="text" style="font-size:large; font-weight: bold; color: rgb(64, 74, 223);" class="btn-sm form-control" id="txtweightinton" [(ngModel)]="txtweightinton" />
                             </div>
                             <div class="col">
                                 <label for="lblweightinton" class="col-form-label">Weight(in Ton)</label>
                             </div>
                             <div class="col">
-                                <input type="text" class="btn-sm form-control" id="txttotalsetup" [(ngModel)]="txttotalsetup" />
+                                <input type="text" style="font-size:large;font-weight: bold; color: rgb(64, 74, 223);" class="btn-sm form-control" id="txttotalsetup" [(ngModel)]="txttotalsetup" />
                             </div>
                             <div class="col">
                                 <label for="lbltotalsetup" class="col-form-label">Total Setup</label>
@@ -127,13 +158,13 @@
                         </div> 
                         <div class="row">
                             <div class="col">
-                                <input type="text" class="btn-sm form-control" id="txttotaloptions" [(ngModel)]="txttotaloptions" />
+                                <input type="text" style="font-size:large;font-weight: bold; color: rgb(64, 74, 223);" class="btn-sm form-control" id="txttotaloptions" [(ngModel)]="txttotaloptions" />
                             </div>
                             <div class="col">
                                 <label for="lbltotaloptions" class="col-form-label">Total Optns</label>
                             </div>
                             <div class="col">
-                                <input type="text" class="btn-sm form-control" id="txttheortime" [(ngModel)]="txttheortime" />
+                                <input type="text" style="font-size:large;font-weight: bold; color: rgb(64, 74, 223);" class="btn-sm form-control" id="txttheortime" [(ngModel)]="txttheortime" />
                             </div>
                             <div class="col">
                                 <label for="lbltheortime" class="col-form-label">Theor.Runtime</label>
@@ -146,31 +177,31 @@
                     <div class="col">
                         <div class="row">
                             <div class="col-4">
-                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                <button style="font-size: 12px;" (click)="onMainScreenClick()" class="btn btn-sm btn-outline-secondary" type="button"><i
                                         class="fa fa-desktop"></i>
                                     Main Screen</button>
                             </div>
                             <div class="col-4">
-                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                <button style="font-size: 12px;"  (click)="onLoadScreenClick()"  class="btn btn-sm btn-outline-secondary" type="button"><i
                                         class="fa fa-upload"></i>
                                     WC Load</button>
                             </div>
                         </div> &nbsp;
                         <div class="row">
                             <div class="col-4">
-                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                <button style="font-size: 12px;" (click)="onBalPunchMIRClick()" class="btn btn-sm btn-outline-secondary" type="button"><i
                                         class="fa fa-window-restore"></i>
                                     Bal.Punch MIR</button>
                             </div>
                             <div class="col-4">
-                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" type="button"><i
+                                <button style="font-size: 12px;" (click)="onBalAllocateClick()" class="btn btn-sm btn-outline-secondary" type="button"><i
                                         class="fa fa-window-maximize"></i>
                                     Bal_Allocate</button>
                             </div>
                         </div> &nbsp;
                         <div class="row">
                             <div class="col-4">
-                                <button style="font-size: 12px;" class="btn btn-sm btn-outline-secondary" style="height: 25px ;" type="button"><i
+                                <button style="font-size: 12px;" (click)="onDeleteMIRLeftClick()" class="btn btn-sm btn-outline-secondary" type="button"><i
                                         class="fa fa-trash"></i>
                                     Delete MIR</button>
                             </div>
@@ -180,6 +211,7 @@
             </div> 
         </div>
     </div>
+    
     <div class="row"> 
         <div class="col-lg-12" >
         <table class="table table-bordered" id="tbldata"> 
