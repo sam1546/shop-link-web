@@ -174,4 +174,14 @@ export class DashboardService {
       }));
   }
 
+  public shop1(plantCode: string): Observable<any> {
+    console.log(plantCode);
+    return this.http.get(glob.apiUrl + "Dashboard/shop1", { params: { plantCode: plantCode} })
+      .pipe(map((response: any) => {
+        return response;
+      }), catchError((error: Response) => {
+        return "error"
+      }));
+  }
+
 }

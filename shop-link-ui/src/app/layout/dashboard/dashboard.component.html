@@ -111,12 +111,13 @@
                             <label><input type="radio" name="radioButton1" [checked]="radioButton2" (click)="radioButton1Click(2)"> Incom. Quantity</label>&nbsp; 
                         </div>
                         <div class="col-sm-8">
-                            <input type="date" id="start" name="trip-start">
+                            <input type="date" id="start" [(ngModel)]="dateTimePicker1" name="trip-start">
                              &nbsp; &nbsp; 
                             <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onExportToExcelClick()"> 
                                      <i class="fa fa-file-excel-o"></i> 
                                 Export To Excel</button> &nbsp; 
-                                &nbsp; <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onShop1()"> <i
+                                &nbsp; 
+                                <button style="font-size: 12px;" class="btn btn-sm btn-secondary btn-md" type="button" (click)="onShop1()"> <i
                                     class="fa fa-desktop"></i>
                                 Shop 1</button> &nbsp;  &nbsp; 
 

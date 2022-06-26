@@ -15,6 +15,10 @@ using System.Configuration;
 using Newtonsoft.Json;
 using System.Threading;
 using System.Text.RegularExpressions;
+
+using Excel123 = Microsoft.Office.Interop.Excel;
+using System.Reflection;
+
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace CoreAPI.Controllers
@@ -44,6 +48,7 @@ namespace CoreAPI.Controllers
 
         string Request, Response, ShopAck, WCAssign, WCAssignini, GWCAssign, PaintWCAssign, WeldWCAssign = "";
         string ShoplinkMirUrl, ShoplinkAck, All, NB, NM, BM, Notch, HM, Bend = "";
+        string exc = "";
 
         DataSet ds = null;
         public static string[] machineGroup = { "Group1" };
@@ -79,7 +84,7 @@ namespace CoreAPI.Controllers
             HM = _env.ContentRootPath + "//files//xml//HM.xml";
             Bend = _env.ContentRootPath + "//files//xml//Bend.xml";
 
-
+            exc = _env.ContentRootPath + "//files//xlsx//Book1.xlsx";
 
 
             Conn = new SqlConnection(Configuration.GetConnectionString("DefaultConnection").ToString());
@@ -2065,7 +2070,7 @@ namespace CoreAPI.Controllers
                         //Added on 22.9.2018 for showing Runtime and weight...
 
                         //***Code moved in common function : getCalculationsAfterAllocate
-                        //c1 = new SqlCommand("select sum(TotalWt)/1000 as TotalWheight,count(RSNo) as RSno,sum(Tot_OPS) as TotalOpns,sum(RunTime) as RunTime from Operations where Mirno='" + txtMirno.Text + "' and BP='" + lblPlantCode.Text + "' and Flag_Fab is null and POType='Primary'", cn);
+                        //c1 = new SqlCommand("select sum(TotalWt)/1000 as TotalWheight,count(RSNo) as RSno,sum(Tot_OPS) as TotalOpns,sum(RunTime) as RunTime from Operations where Mirno='" + txtMirno.Text + "' and BP='" + lblPlantCode + "' and Flag_Fab is null and POType='Primary'", cn);
                         //SqlDataReader dr = c1.ExecuteReader();
                         //if (dr.Read())
                         //{
@@ -4826,6 +4831,5774 @@ namespace CoreAPI.Controllers
             Conn.Close();
             return Ok(myDataSet.Tables[0]);
         }
+
+
+        [HttpGet]
+        [Route("shop1")]
+        public async Task<IActionResult> Shop1(string plantCode)
+        {
+            string lblPlantCode = plantCode;
+            string dateTimePicker1 = DateTime.Now.ToString();
+            Excel123.ApplicationClass excelApp = new Excel123.ApplicationClass();
+            Excel123.Workbook workbook = (Excel123.Workbook)excelApp.Workbooks.Add(Missing.Value);
+            Excel123.Worksheet wrksheet;
+
+            if (Conn.State == ConnectionState.Closed)
+                Conn.Open();
+
+            /*StreamReader sr = new StreamReader(Application.StartupPath + "\\" + "baudsetting.ini");
+            string exc = sr.ReadLine();
+            sr.Close();*/
+
+            //string exc = Application.StartupPath + "\\" + "Book1.xlsx";
+
+            if (lblPlantCode == "TM01")
+                exc = _env.ContentRootPath + "//files//xlsx//TM01.xlsx";
+            else if (lblPlantCode == "TM02")
+                exc = _env.ContentRootPath + "//files//xlsx//TM02.xlsx";
+            else if (lblPlantCode == "TM03")
+                exc = _env.ContentRootPath + "//files//xlsx//TM03.xlsx";
+            else if (lblPlantCode == "TMD1")
+                exc = _env.ContentRootPath + "//files//xlsx//TMD1.xlsx";
+            try
+            {
+                DateTime currentTime = DateTime.Now;
+                workbook = excelApp.Workbooks.Open(exc, 0, false, 5, "", "", true, Excel123.XlPlatform.xlWindows, "\t", false, false, 0, true, 1, 0);
+                //get 1st worksheet
+                wrksheet = (Excel123.Worksheet)workbook.Sheets.get_Item(1);
+
+                SqlCommand cmd = new SqlCommand();
+                SqlDataReader dr;
+                 
+                int CK = 0, CL = 0, CM = 0;
+                string queryadp = "";
+                for (int i = 0; i < 3; i++)
+                {
+                    CK = 60 + 3 * i;
+                    CL = 61 + 3 * i;
+                    CM = 62 + 3 * i;
+                    DateTime scandate = DateTime.Parse(dateTimePicker1.ToString());
+                    scandate = scandate.AddDays(i);
+
+                    if (lblPlantCode == "TM02")
+
+                    {
+                        string scan_Date = scandate.Month + "/" + scandate.Day + "/" + scandate.Year + " " + scandate.TimeOfDay;
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string sec = "", lot = "", st = "", tot = "", Trsno = "", Toprns = "";
+                        while (dr.Read())
+                        {
+                            if (!sec.Contains(dr["Mirno"].ToString()))
+                                sec += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lot += dr["LotCode"].ToString().Remove(5);
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+                            st += dr["OPStatus"].ToString();
+                        }
+
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            tot = dr["TWheight"].ToString();
+                            Trsno = dr["TRSNo"].ToString();
+                            Toprns = dr["TOPsn"].ToString();
+                            lot = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secC1 = "", lotC1 = "", mirC1 = "", stc1 = "", TrsnoC1 = "", ToprnsC1 = "";
+                        while (dr.Read())
+                        {
+                            if (!secC1.Contains(dr["Mirno"].ToString()))
+                                secC1 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotC1 += dr["LotCode"].ToString().Remove(5);
+                            //mirC1+= dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            stc1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirC1 = dr["TWheight"].ToString();
+                            TrsnoC1 = dr["TRSNo"].ToString();
+                            ToprnsC1 = dr["TOPsn"].ToString();
+                            lotC1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD1 = "", lotD1 = "", mirD1 = "", std1 = "";
+                        if (dr.Read())
+                        {
+                            if (!secD1.Contains(dr["Mirno"].ToString()))
+                                secD1 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD1 += dr["LotCode"].ToString().Remove(5);
+                            //lotD1 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            std1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        string TrsnoD1 = "", ToprnsD1 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD1 = dr["TWheight"].ToString();
+                            TrsnoD1 = dr["TRSNo"].ToString();
+                            ToprnsD1 = dr["TOPsn"].ToString();
+                            lotD1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb2 = "", lotb2 = "", mirb2 = "", stb2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb2.Contains(dr["Mirno"].ToString()))
+                                secb2 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            // lotb2 += dr["LotCode"].ToString().Remove(5);
+                            //mirb2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob2 = "", Toprnsb2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb2 = dr["TWheight"].ToString();
+                            Trsnob2 = dr["TRSNo"].ToString();
+                            Toprnsb2 = dr["TOPsn"].ToString();
+                            lotb2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc2 = "", lotc2 = "", mirc2 = "", stc2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc2.Contains(dr["Mirno"].ToString()))
+                                secc2 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc2 += dr["LotCode"].ToString().Remove(5);
+                            //mirc2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc2 = "", Toprnsc2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc2 = dr["TWheight"].ToString();
+                            Trsnoc2 = dr["TRSNo"].ToString();
+                            Toprnsc2 = dr["TOPsn"].ToString();
+                            lotc2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD2 = "", lotD2 = "", mirD2 = "", std2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD2.Contains(dr["Mirno"].ToString()))
+                                secD2 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD2 += dr["LotCode"].ToString().Remove(5);
+                            // mirD2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD2 = "", ToprnsD2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD2 = dr["TWheight"].ToString();
+                            TrsnoD2 = dr["TRSNo"].ToString();
+                            ToprnsD2 = dr["TOPsn"].ToString();
+                            lotD2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb3 = "", lotb3 = "", mirb3 = "", stb3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb3.Contains(dr["Mirno"].ToString()))
+                                secb3 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob3 = "", Toprnsb3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb3 = dr["TWheight"].ToString();
+                            Trsnob3 = dr["TRSNo"].ToString();
+                            Toprnsb3 = dr["TOPsn"].ToString();
+                            lotb3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc3 = "", lotc3 = "", mirc3 = "", stc3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc3.Contains(dr["Mirno"].ToString()))
+                                secc3 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc3 = "", Toprnsc3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc3 = dr["TWheight"].ToString();
+                            Trsnoc3 = dr["TRSNo"].ToString();
+                            Toprnsc3 = dr["TOPsn"].ToString();
+                            lotc3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD3 = "", lotD3 = "", mirD3 = "", std3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD3.Contains(dr["Mirno"].ToString()))
+                                secD3 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD3 = "", ToprnsD3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD3 = dr["TWheight"].ToString();
+                            TrsnoD3 = dr["TRSNo"].ToString();
+                            ToprnsD3 = dr["TOPsn"].ToString();
+                            lotD3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb4 = "", lotb4 = "", mirb4 = "", stb4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb4.Contains(dr["Mirno"].ToString()))
+                                secb4 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb4 += dr["LotCode"].ToString().Remove(5);
+                            //mirb4 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            //if (!(stb4.Contains("B")||!stb4.Contains("N")||!stb4.Contains("M"))
+                            stb4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob4 = "", Toprnsb4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb4 = dr["TWheight"].ToString();
+                            Trsnob4 = dr["TRSNo"].ToString();
+                            Toprnsb4 = dr["TOPsn"].ToString();
+                            lotb4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc4 = "", lotc4 = "", mirc4 = "", stc4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc4.Contains(dr["Mirno"].ToString()))
+                                secc4 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc4 += dr["LotCode"].ToString().Remove(5);
+                            //mirc4 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc4 = "", Toprnsc4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc4 = dr["TWheight"].ToString();
+                            Trsnoc4 = dr["TRSNo"].ToString();
+                            Toprnsc4 = dr["TOPsn"].ToString();
+                            lotc4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD4 = "", lotD4 = "", mirD4 = "", std4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD4.Contains(dr["Mirno"].ToString()))
+                                secD4 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD4 += dr["LotCode"].ToString().Remove(5);
+                            // mirD4 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD4 = "", ToprnsD4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD4 = dr["TWheight"].ToString();
+                            TrsnoD4 = dr["TRSNo"].ToString();
+                            ToprnsD4 = dr["TOPsn"].ToString();
+                            lotD4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb5 = "", lotb5 = "", mirb5 = "", stb5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb5.Contains(dr["Mirno"].ToString()))
+                                secb5 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb5 += dr["LotCode"].ToString().Remove(5);
+                            // mirb5 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob5 = "", Toprnsb5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb5 = dr["TWheight"].ToString();
+                            Trsnob5 = dr["TRSNo"].ToString();
+                            Toprnsb5 = dr["TOPsn"].ToString();
+                            lotb5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc5 = "", lotc5 = "", mirc5 = "", stc5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc5.Contains(dr["Mirno"].ToString()))
+                                secc5 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            // lotc5 += dr["LotCode"].ToString().Remove(5);
+                            //mirc5 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc5 = "", Toprnsc5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc5 = dr["TWheight"].ToString();
+                            Trsnoc5 = dr["TRSNo"].ToString();
+                            Toprnsc5 = dr["TOPsn"].ToString();
+                            lotc5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD5 = "", lotD5 = "", mirD5 = "", std5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD5.Contains(dr["Mirno"].ToString()))
+                                secD5 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD5 += dr["LotCode"].ToString().Remove(5);
+                            //mirD5 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD5 = "", ToprnsD5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD5 = dr["TWheight"].ToString();
+                            TrsnoD5 = dr["TRSNo"].ToString();
+                            ToprnsD5 = dr["TOPsn"].ToString();
+                            lotD5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb6 = "", lotb6 = "", mirb6 = "", stb6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb6.Contains(dr["Mirno"].ToString()))
+                                secb6 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb6 += dr["LotCode"].ToString().Remove(5);
+                            //mirb6 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob6 = "", Toprnsb6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb6 = dr["TWheight"].ToString();
+                            Trsnob6 = dr["TRSNo"].ToString();
+                            Toprnsb6 = dr["TOPsn"].ToString();
+                            lotb6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc6 = "", lotc6 = "", mirc6 = "", stc6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc6.Contains(dr["Mirno"].ToString()))
+                                secc6 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc6 += dr["LotCode"].ToString().Remove(5);
+                            //mirc6 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc6 = "", Toprnsc6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc6 = dr["TWheight"].ToString();
+                            Trsnoc6 = dr["TRSNo"].ToString();
+                            Toprnsc6 = dr["TOPsn"].ToString();
+                            lotc6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD6 = "", lotD6 = "", mirD6 = "", stD6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD6.Contains(dr["Mirno"].ToString()))
+                                secD6 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD6 += dr["LotCode"].ToString().Remove(5);
+                            //mirD6 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stD6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD6 = "", ToprnsD6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD6 = dr["TWheight"].ToString();
+                            TrsnoD6 = dr["TRSNo"].ToString();
+                            ToprnsD6 = dr["TOPsn"].ToString();
+                            lotD6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='P-81' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb7 = "", lotb7 = "", mirb7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb7.Contains(dr["Mirno"].ToString()))
+                                secb7 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb7 += dr["LotCode"].ToString().Remove(5);
+                            //mirb7 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='P-81' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc7 = "", lotc7 = "", mirc7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc7.Contains(dr["Mirno"].ToString()))
+                                secc7 += (dr["SctDinemtion"].ToString().Remove(1, 10) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc7 += dr["LotCode"].ToString().Remove(5);
+                            //mirc7 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='P-81' and BP='" + lblPlantCode + "' and Flag_Fab is null  ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD7 = "", lotD7 = "", mirD7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD7.Contains(dr["Mirno"].ToString()))
+                                secD7 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD7 += dr["LotCode"].ToString().Remove(5);
+                            //mirD7 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        //*************************************CD01 to CP07*******************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb8 = "", lotb8 = "", mirb8 = "", stb8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb8.Contains(dr["Mirno"].ToString()))
+                                secb8 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb8 += dr["LotCode"].ToString().Remove(5);
+                            // mirb8 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob8 = "", Toprnsb8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb8 = dr["TWheight"].ToString();
+                            Trsnob8 = dr["TRSNo"].ToString();
+                            Toprnsb8 = dr["TOPsn"].ToString();
+                            lotb8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc8 = "", lotc8 = "", mirc8 = "", stc8 = "";
+                        if (dr.Read())
+                        {
+                            if (!secc8.Contains(dr["Mirno"].ToString()))
+                                secc8 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc8 += dr["LotCode"].ToString().Remove(5);
+                            //mirc7 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc8 = "", Toprnsc8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc8 = dr["TWheight"].ToString();
+                            Trsnoc8 = dr["TRSNo"].ToString();
+                            Toprnsc8 = dr["TOPsn"].ToString();
+                            lotc8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD8 = "", lotD8 = "", mirD8 = "", std8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD8.Contains(dr["Mirno"].ToString()))
+                                secD8 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD8 += dr["LotCode"].ToString().Remove(5);
+                            //mirD8 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD8 = "", ToprnsD8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD8 = dr["TWheight"].ToString();
+                            TrsnoD8 = dr["TRSNo"].ToString();
+                            ToprnsD8 = dr["TOPsn"].ToString();
+                            lotD8 = dr["LotCode"].ToString();
+
+                        }
+                        dr.Close();
+
+                        //**************************************  cp07 to CD01  ****************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb9 = "", lotb9 = "", mirb9 = "", stb9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb9.Contains(dr["Mirno"].ToString()))
+                                secb9 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb6 += dr["LotCode"].ToString().Remove(5);
+                            //mirb6 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob9 = "", Toprnsb9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb9 = dr["TWheight"].ToString();
+                            Trsnob9 = dr["TRSNo"].ToString();
+                            Toprnsb9 = dr["TOPsn"].ToString();
+                            lotb9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc9 = "", lotc9 = "", mirc9 = "", stc9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc9.Contains(dr["Mirno"].ToString()))
+                                secc9 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc6 += dr["LotCode"].ToString().Remove(5);
+                            //mirc6 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc9 = "", Toprnsc9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc9 = dr["TWheight"].ToString();
+                            Trsnoc9 = dr["TRSNo"].ToString();
+                            Toprnsc9 = dr["TOPsn"].ToString();
+                            lotc9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD9 = "", lotD9 = "", mirD9 = "", stD9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD9.Contains(dr["Mirno"].ToString()))
+                                secD9 += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD6 += dr["LotCode"].ToString().Remove(5);
+                            //mirD6 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stD9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD9 = "", ToprnsD9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD9 = dr["TWheight"].ToString();
+                            TrsnoD9 = dr["TRSNo"].ToString();
+                            ToprnsD9 = dr["TOPsn"].ToString();
+                            lotD9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+
+
+
+
+
+                        //cn.Close();
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = "";
+
+
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = "";
+
+                        //***********************CP07*****************************
+
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = "";
+
+
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = tot;
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = mirC1;
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = mirD1;
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = mirb2;
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = mirc2;
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = mirD2;
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = mirb3;
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = mirc3;
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = mirD3;
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = mirb4;
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = mirc4;
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = mirD4;
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = mirb5;
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = mirc5;
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = mirD5;
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = mirb6;
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = mirc6;
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = mirD6;
+
+
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = currentTime;
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = scandate;
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = sec;
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = secC1;
+
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = secD1;
+                        // ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = tot;
+
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = secb2;
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = secc2;
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = secD2;
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = secb3;
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = secc3;
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = secD3;
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = secb4;
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = secc4;
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = secD4;
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = secb5;
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = secc5;
+
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = secD5;
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = secb6;
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = secc6;
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = secD6;
+
+                        //***************************
+
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = lot;
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = lotC1;
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = lotD1;
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = lotb2;
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = lotc2;
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = lotD2;
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = lotb3;
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = lotc3;
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = lotD3;
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = lotb4;
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = lotc4;
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = lotD4;
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = lotb5;
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = lotc5;
+
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = lotD5;
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = lotb6;
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = lotc6;
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = lotD6;
+
+
+
+                        //*************************
+
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = st;
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = stc1;
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = std1;
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = stb2;
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = stc2;
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = std2;
+
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = stb3;
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = stc3;
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = std3;
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = stb4;
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = stc4;
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = std4;
+
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = stb5;
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = stc5;
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = std5;
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = stb6;
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = stc6;
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = stD6;
+
+
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = Trsno;
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = TrsnoC1;
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = TrsnoD1;
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = Trsnob2;
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = Trsnoc2;
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = TrsnoD2;
+
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = Trsnob3;
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = Trsnoc3;
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = TrsnoD3;
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = Trsnob4;
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = Trsnoc4;
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = TrsnoD4;
+
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = Trsnob5;
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = Trsnoc5;
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = TrsnoD5;
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = Trsnob6;
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = Trsnoc6;
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = TrsnoD6;
+
+
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = Toprns;
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = ToprnsC1;
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = ToprnsD1;
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = Toprnsb2;
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = Toprnsc2;
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = ToprnsD2;
+
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = Toprnsb3;
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = Toprnsc3;
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = ToprnsD3;
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = Toprnsb4;
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = Toprnsc4;
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = ToprnsD4;
+
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = Toprnsb5;
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = Toprnsc5;
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = ToprnsD5;
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = Toprnsb6;
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = Toprnsc6;
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = ToprnsD6;
+
+
+
+
+
+
+                        //**********************CP07*************************
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = secb9;
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = secc9;
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = secD9;
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = mirb9;
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = mirc9;
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = mirD9;
+
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = Trsnob9;
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = Trsnoc9;
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = TrsnoD9;
+
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = Toprnsb9;
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = Toprnsc9;
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = ToprnsD9;
+
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = stb9;
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = stc9;
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = stD9;
+
+
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = lotb9;
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = lotc9;
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = lotD9;
+
+
+
+
+                        //**********************CD-01***************************
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = secb8;
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = secc8;
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = secD8;
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = mirb8;
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = mirc8;
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = mirD8;
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = Trsnob8;
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = Trsnoc8;
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = TrsnoD8;
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = Toprnsb8;
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = Toprnsc8;
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = ToprnsD8;
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = stb8;
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = stc8;
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = std8;
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = lotb8;
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = lotc8;
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = lotD8;
+
+
+
+
+
+                    }
+
+                    else if (lblPlantCode == "TM03")
+                    {
+                        string scan_Date = scandate.Month + "/" + scandate.Day + "/" + scandate.Year + " " + scandate.TimeOfDay;
+
+                        //*************************************CP22***************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string sec = "", lot = "", st = "", tot = "", Trsno = "", Toprns = "";
+                        while (dr.Read())
+                        {
+                            if (!sec.Contains(dr["Mirno"].ToString()))
+                                //sec += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                                sec += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+
+                            //lot += dr["LotCode"].ToString().Remove(5);
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+                            st += dr["OPStatus"].ToString();
+                        }
+
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            tot = dr["TWheight"].ToString();
+                            Trsno = dr["TRSNo"].ToString();
+                            Toprns = dr["TOPsn"].ToString();
+                            lot = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secC1 = "", lotC1 = "", mirC1 = "", stc1 = "", TrsnoC1 = "", ToprnsC1 = "";
+                        while (dr.Read())
+                        {
+                            if (!secC1.Contains(dr["Mirno"].ToString()))
+                                secC1 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotC1 += dr["LotCode"].ToString().Remove(5);
+                            //mirC1+= dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            stc1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirC1 = dr["TWheight"].ToString();
+                            TrsnoC1 = dr["TRSNo"].ToString();
+                            ToprnsC1 = dr["TOPsn"].ToString();
+                            lotC1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD1 = "", lotD1 = "", mirD1 = "", std1 = "";
+                        if (dr.Read())
+                        {
+                            if (!secD1.Contains(dr["Mirno"].ToString()))
+                                secD1 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD1 += dr["LotCode"].ToString().Remove(5);
+                            //lotD1 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            std1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        string TrsnoD1 = "", ToprnsD1 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD22' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD1 = dr["TWheight"].ToString();
+                            TrsnoD1 = dr["TRSNo"].ToString();
+                            ToprnsD1 = dr["TOPsn"].ToString();
+                            lotD1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //***********************************CD14************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb2 = "", lotb2 = "", mirb2 = "", stb2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb2.Contains(dr["Mirno"].ToString()))
+                                secb2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            // lotb2 += dr["LotCode"].ToString().Remove(5);
+                            //mirb2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob2 = "", Toprnsb2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb2 = dr["TWheight"].ToString();
+                            Trsnob2 = dr["TRSNo"].ToString();
+                            Toprnsb2 = dr["TOPsn"].ToString();
+                            lotb2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc2 = "", lotc2 = "", mirc2 = "", stc2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc2.Contains(dr["Mirno"].ToString()))
+                                secc2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc2 += dr["LotCode"].ToString().Remove(5);
+                            //mirc2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc2 = "", Toprnsc2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc2 = dr["TWheight"].ToString();
+                            Trsnoc2 = dr["TRSNo"].ToString();
+                            Toprnsc2 = dr["TOPsn"].ToString();
+                            lotc2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD2 = "", lotD2 = "", mirD2 = "", std2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD2.Contains(dr["Mirno"].ToString()))
+                                secD2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD2 += dr["LotCode"].ToString().Remove(5);
+                            // mirD2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD2 = "", ToprnsD2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD14' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD2 = dr["TWheight"].ToString();
+                            TrsnoD2 = dr["TRSNo"].ToString();
+                            ToprnsD2 = dr["TOPsn"].ToString();
+                            lotD2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //*********************************** CP02 ***********************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb3 = "", lotb3 = "", mirb3 = "", stb3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb3.Contains(dr["Mirno"].ToString()))
+                                secb3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob3 = "", Toprnsb3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb3 = dr["TWheight"].ToString();
+                            Trsnob3 = dr["TRSNo"].ToString();
+                            Toprnsb3 = dr["TOPsn"].ToString();
+                            lotb3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc3 = "", lotc3 = "", mirc3 = "", stc3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc3.Contains(dr["Mirno"].ToString()))
+                                secc3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc3 = "", Toprnsc3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc3 = dr["TWheight"].ToString();
+                            Trsnoc3 = dr["TRSNo"].ToString();
+                            Toprnsc3 = dr["TOPsn"].ToString();
+                            lotc3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD3 = "", lotD3 = "", mirD3 = "", std3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD3.Contains(dr["Mirno"].ToString()))
+                                secD3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD3 = "", ToprnsD3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD3 = dr["TWheight"].ToString();
+                            TrsnoD3 = dr["TRSNo"].ToString();
+                            ToprnsD3 = dr["TOPsn"].ToString();
+                            lotD3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //*************************************CP-03*************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb4 = "", lotb4 = "", mirb4 = "", stb4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb4.Contains(dr["Mirno"].ToString()))
+                                secb4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob4 = "", Toprnsb4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb4 = dr["TWheight"].ToString();
+                            Trsnob4 = dr["TRSNo"].ToString();
+                            Toprnsb4 = dr["TOPsn"].ToString();
+                            lotb4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc4 = "", lotc4 = "", mirc4 = "", stc4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc4.Contains(dr["Mirno"].ToString()))
+                                secc4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc4 = "", Toprnsc4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc4 = dr["TWheight"].ToString();
+                            Trsnoc4 = dr["TRSNo"].ToString();
+                            Toprnsc4 = dr["TOPsn"].ToString();
+                            lotc4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD4 = "", lotD4 = "", mirD4 = "", std4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD4.Contains(dr["Mirno"].ToString()))
+                                secD4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD4 = "", ToprnsD4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD4 = dr["TWheight"].ToString();
+                            TrsnoD4 = dr["TRSNo"].ToString();
+                            ToprnsD4 = dr["TOPsn"].ToString();
+                            lotD4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**********************************************CP-04****************************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb5 = "", lotb5 = "", mirb5 = "", stb5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb5.Contains(dr["Mirno"].ToString()))
+                                secb5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob5 = "", Toprnsb5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb5 = dr["TWheight"].ToString();
+                            Trsnob5 = dr["TRSNo"].ToString();
+                            Toprnsb5 = dr["TOPsn"].ToString();
+                            lotb5 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc5 = "", lotc5 = "", mirc5 = "", stc5 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc5.Contains(dr["Mirno"].ToString()))
+                                secc5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc5 = "", Toprnsc5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc5 = dr["TWheight"].ToString();
+                            Trsnoc5 = dr["TRSNo"].ToString();
+                            Toprnsc5 = dr["TOPsn"].ToString();
+                            lotc5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD5 = "", lotD5 = "", mirD5 = "", std5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD5.Contains(dr["Mirno"].ToString()))
+                                secD5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD5 = "", ToprnsD5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD5 = dr["TWheight"].ToString();
+                            TrsnoD5 = dr["TRSNo"].ToString();
+                            ToprnsD5 = dr["TOPsn"].ToString();
+                            lotD5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //************************************** CP-08   ***********************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb6 = "", lotb6 = "", mirb6 = "", stb6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb6.Contains(dr["Mirno"].ToString()))
+                                secb6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob6 = "", Toprnsb6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb6 = dr["TWheight"].ToString();
+                            Trsnob6 = dr["TRSNo"].ToString();
+                            Toprnsb6 = dr["TOPsn"].ToString();
+                            lotb6 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc6 = "", lotc6 = "", mirc6 = "", stc6 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc6.Contains(dr["Mirno"].ToString()))
+                                secc6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc6 = "", Toprnsc6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc6 = dr["TWheight"].ToString();
+                            Trsnoc6 = dr["TRSNo"].ToString();
+                            Toprnsc6 = dr["TOPsn"].ToString();
+                            lotc6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD6 = "", lotD6 = "", mirD6 = "", std6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD6.Contains(dr["Mirno"].ToString()))
+                                secD6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD6 = "", ToprnsD6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP08' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD6 = dr["TWheight"].ToString();
+                            TrsnoD6 = dr["TRSNo"].ToString();
+                            ToprnsD6 = dr["TOPsn"].ToString();
+                            lotD6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**************************************************CP-09*******************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb7 = "", lotb7 = "", mirb7 = "", stb7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb7.Contains(dr["Mirno"].ToString()))
+                                secb7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob7 = "", Toprnsb7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb7 = dr["TWheight"].ToString();
+                            Trsnob7 = dr["TRSNo"].ToString();
+                            Toprnsb7 = dr["TOPsn"].ToString();
+                            lotb7 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc7 = "", lotc7 = "", mirc7 = "", stc7 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc7.Contains(dr["Mirno"].ToString()))
+                                secc7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc7 = "", Toprnsc7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc7 = dr["TWheight"].ToString();
+                            Trsnoc7 = dr["TRSNo"].ToString();
+                            Toprnsc7 = dr["TOPsn"].ToString();
+                            lotc7 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD7 = "", lotD7 = "", mirD7 = "", std7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD7.Contains(dr["Mirno"].ToString()))
+                                secD7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD7 = "", ToprnsD7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP09' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD7 = dr["TWheight"].ToString();
+                            TrsnoD7 = dr["TRSNo"].ToString();
+                            ToprnsD7 = dr["TOPsn"].ToString();
+                            lotD7 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //****************************CP-10*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP10' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb8 = "", lotb8 = "", mirb8 = "", stb8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb8.Contains(dr["Mirno"].ToString()))
+                                secb8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob8 = "", Toprnsb8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb8 = dr["TWheight"].ToString();
+                            Trsnob8 = dr["TRSNo"].ToString();
+                            Toprnsb8 = dr["TOPsn"].ToString();
+                            lotb8 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc8 = "", lotc8 = "", mirc8 = "", stc8 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc8.Contains(dr["Mirno"].ToString()))
+                                secc8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc8 = "", Toprnsc8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc8 = dr["TWheight"].ToString();
+                            Trsnoc8 = dr["TRSNo"].ToString();
+                            Toprnsc8 = dr["TOPsn"].ToString();
+                            lotc8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD8 = "", lotD8 = "", mirD8 = "", std8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD8.Contains(dr["Mirno"].ToString()))
+                                secD8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD8 = "", ToprnsD8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD8 = dr["TWheight"].ToString();
+                            TrsnoD8 = dr["TRSNo"].ToString();
+                            ToprnsD8 = dr["TOPsn"].ToString();
+                            lotD8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //****************************CP-11*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb9 = "", lotb9 = "", mirb9 = "", stb9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb9.Contains(dr["Mirno"].ToString()))
+                                secb9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob9 = "", Toprnsb9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb9 = dr["TWheight"].ToString();
+                            Trsnob9 = dr["TRSNo"].ToString();
+                            Toprnsb9 = dr["TOPsn"].ToString();
+                            lotb9 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc9 = "", lotc9 = "", mirc9 = "", stc9 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc9.Contains(dr["Mirno"].ToString()))
+                                secc9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc9 = "", Toprnsc9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc9 = dr["TWheight"].ToString();
+                            Trsnoc9 = dr["TRSNo"].ToString();
+                            Toprnsc9 = dr["TOPsn"].ToString();
+                            lotc9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD9 = "", lotD9 = "", mirD9 = "", std9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD9.Contains(dr["Mirno"].ToString()))
+                                secD9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD9 = "", ToprnsD9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD9 = dr["TWheight"].ToString();
+                            TrsnoD9 = dr["TRSNo"].ToString();
+                            ToprnsD9 = dr["TOPsn"].ToString();
+                            lotD9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //******************************CP-19**************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb10 = "", lotb10 = "", mirb10 = "", stb10 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb10.Contains(dr["Mirno"].ToString()))
+                                secb10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob10 = "", Toprnsb10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb10 = dr["TWheight"].ToString();
+                            Trsnob10 = dr["TRSNo"].ToString();
+                            Toprnsb10 = dr["TOPsn"].ToString();
+                            lotb10 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc10 = "", lotc10 = "", mirc10 = "", stc10 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc10.Contains(dr["Mirno"].ToString()))
+                                secc10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc10 = "", Toprnsc10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc10 = dr["TWheight"].ToString();
+                            Trsnoc10 = dr["TRSNo"].ToString();
+                            Toprnsc10 = dr["TOPsn"].ToString();
+                            lotc10 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD10 = "", lotD10 = "", mirD10 = "", std10 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD10.Contains(dr["Mirno"].ToString()))
+                                secD10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD10 = "", ToprnsD10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP19' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD10 = dr["TWheight"].ToString();
+                            TrsnoD10 = dr["TRSNo"].ToString();
+                            ToprnsD10 = dr["TOPsn"].ToString();
+                            lotD10 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**************************CP20************************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb11 = "", lotb11 = "", mirb11 = "", stb11 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb11.Contains(dr["Mirno"].ToString()))
+                                secb11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob11 = "", Toprnsb11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb11 = dr["TWheight"].ToString();
+                            Trsnob11 = dr["TRSNo"].ToString();
+                            Toprnsb11 = dr["TOPsn"].ToString();
+                            lotb11 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc11 = "", lotc11 = "", mirc11 = "", stc11 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc11.Contains(dr["Mirno"].ToString()))
+                                secc11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc11 = "", Toprnsc11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc11 = dr["TWheight"].ToString();
+                            Trsnoc11 = dr["TRSNo"].ToString();
+                            Toprnsc11 = dr["TOPsn"].ToString();
+                            lotc11 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD11 = "", lotD11 = "", mirD11 = "", std11 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD11.Contains(dr["Mirno"].ToString()))
+                                secD11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD11 = "", ToprnsD11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD11 = dr["TWheight"].ToString();
+                            TrsnoD11 = dr["TRSNo"].ToString();
+                            ToprnsD11 = dr["TOPsn"].ToString();
+                            lotD11 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //*****************************CP-21***********************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb12 = "", lotb12 = "", mirb12 = "", stb12 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb12.Contains(dr["Mirno"].ToString()))
+                                secb12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob12 = "", Toprnsb12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb12 = dr["TWheight"].ToString();
+                            Trsnob12 = dr["TRSNo"].ToString();
+                            Toprnsb12 = dr["TOPsn"].ToString();
+                            lotb12 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc12 = "", lotc12 = "", mirc12 = "", stc12 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc12.Contains(dr["Mirno"].ToString()))
+                                secc12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc12 = "", Toprnsc12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc12 = dr["TWheight"].ToString();
+                            Trsnoc12 = dr["TRSNo"].ToString();
+                            Toprnsc12 = dr["TOPsn"].ToString();
+                            lotc12 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD12 = "", lotD12 = "", mirD12 = "", std12 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD12.Contains(dr["Mirno"].ToString()))
+                                secD12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD12 = "", ToprnsD12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP21' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD12 = dr["TWheight"].ToString();
+                            TrsnoD12 = dr["TRSNo"].ToString();
+                            ToprnsD12 = dr["TOPsn"].ToString();
+                            lotD12 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //*******************************CP-24*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb13 = "", lotb13 = "", mirb13 = "", stb13 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb13.Contains(dr["Mirno"].ToString()))
+                                secb13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob13 = "", Toprnsb13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb13 = dr["TWheight"].ToString();
+                            Trsnob13 = dr["TRSNo"].ToString();
+                            Toprnsb13 = dr["TOPsn"].ToString();
+                            lotb13 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc13 = "", lotc13 = "", mirc13 = "", stc13 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc13.Contains(dr["Mirno"].ToString()))
+                                secc13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc13 = "", Toprnsc13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc13 = dr["TWheight"].ToString();
+                            Trsnoc13 = dr["TRSNo"].ToString();
+                            Toprnsc13 = dr["TOPsn"].ToString();
+                            lotc13 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD13 = "", lotD13 = "", mirD13 = "", std13 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD13.Contains(dr["Mirno"].ToString()))
+                                secD13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD13 = "", ToprnsD13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP24' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD13 = dr["TWheight"].ToString();
+                            TrsnoD13 = dr["TRSNo"].ToString();
+                            ToprnsD13 = dr["TOPsn"].ToString();
+                            lotD13 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //***************************CP25*************************************
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb14 = "", lotb14 = "", mirb14 = "", stb14 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb14.Contains(dr["Mirno"].ToString()))
+                                secb14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb14 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob14 = "", Toprnsb14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb14 = dr["TWheight"].ToString();
+                            Trsnob14 = dr["TRSNo"].ToString();
+                            Toprnsb14 = dr["TOPsn"].ToString();
+                            lotb14 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc14 = "", lotc14 = "", mirc14 = "", stc14 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc14.Contains(dr["Mirno"].ToString()))
+                                secc14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc14 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc14 = "", Toprnsc14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc14 = dr["TWheight"].ToString();
+                            Trsnoc14 = dr["TRSNo"].ToString();
+                            Toprnsc14 = dr["TOPsn"].ToString();
+                            lotc14 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD14 = "", lotD14 = "", mirD14 = "", std14 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD14.Contains(dr["Mirno"].ToString()))
+                                secD14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD14 = "", ToprnsD14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD14 = dr["TWheight"].ToString();
+                            TrsnoD14 = dr["TRSNo"].ToString();
+                            ToprnsD14 = dr["TOPsn"].ToString();
+                            lotD14 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //******************clear******************************************************
+
+                        //  *******CP19**************
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = "";
+
+                        //****************************************** ************************************************
+                        //  *******CP20**************
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = "";
+
+                        //***************************************************************************************
+                        //  *******CP21**************
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = "";
+
+                        //********************************************************************************************
+                        //  *******CP01**************
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = "";
+
+
+                        //********************************************************************
+                        //  *******CP02**************
+
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = "";
+
+                        //*************************************************************************************************************
+                        //  *******CP03**************
+
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = "";
+
+                        //*************************CP-04************************************
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = "";
+
+                        //***********************CP-05*****************************
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = "";
+
+                        //****************************CP-06*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["52", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["52", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["52", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["53", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["53", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["53", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["54", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["54", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["54", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["55", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["55", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["55", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["56", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["56", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["56", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["57", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["57", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["57", CM]).Value2 = "";
+
+                        //****************************** CP-07*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["58", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["58", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["58", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["59", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["59", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["59", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["60", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["60", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["60", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["61", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["61", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["61", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["62", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["62", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["62", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["63", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["63", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["63", CM]).Value2 = "";
+
+                        //***********************CP-08***********************
+
+                        ((Excel123.Range)wrksheet.Cells["64", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["64", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["64", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["65", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["65", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["65", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["66", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["66", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["66", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["67", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["67", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["67", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["68", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["68", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["68", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["69", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["69", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["69", CM]).Value2 = "";
+
+                        //***********************************CP-09****************
+
+                        ((Excel123.Range)wrksheet.Cells["70", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["70", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["70", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["71", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["71", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["71", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["72", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["72", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["72", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["73", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["73", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["73", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["74", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["74", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["74", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["75", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["75", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["75", CM]).Value2 = "";
+
+                        //*******************CP-10***************************
+
+                        ((Excel123.Range)wrksheet.Cells["76", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["76", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["76", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["77", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["77", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["77", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["78", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["78", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["78", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["79", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["79", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["79", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["80", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["80", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["80", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["81", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["81", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["81", CM]).Value2 = "";
+
+                        //***************************CD22*******************************
+
+                        ((Excel123.Range)wrksheet.Cells["82", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["82", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["82", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["83", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["83", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["83", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["84", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["84", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["84", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["85", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["85", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["85", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["86", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["86", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["86", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["87", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["87", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["87", CM]).Value2 = "";
+
+
+                        //********************* insert data *********************
+                        //***************cp19
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = currentTime;
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = scandate;
+
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = sec;
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = secC1;
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = secD1;
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = tot;
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = mirC1;
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = mirD1;
+
+
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = Trsno;
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = TrsnoC1;
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = TrsnoD1;
+
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = Toprns;
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = ToprnsC1;
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = ToprnsD1;
+
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = st;
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = stc1;
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = std1;
+
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = lot;
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = lotC1;
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = lotD1;
+
+                        //**************************************************************************************
+                        //************ cp20*****************
+
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = secb2;
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = secc2;
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = secD2;
+
+
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = mirb2;
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = mirc2;
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = mirD2;
+
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = Trsnob2;
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = Trsnoc2;
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = TrsnoD2;
+
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = Toprnsb2;
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = Toprnsc2;
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = ToprnsD2;
+
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = stb2;
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = stc2;
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = std2;
+
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = lotb2;
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = lotc2;
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = lotD2;
+
+                        //**************************************************************************************
+                        //**************cp21****************
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = secb3;
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = secc3;
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = secD3;
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = mirb3;
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = mirc3;
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = mirD3;
+
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = Trsnob3;
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = Trsnoc3;
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = TrsnoD3;
+
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = Toprnsb3;
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = Toprnsc3;
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = ToprnsD3;
+
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = stb3;
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = stc3;
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = std3;
+
+
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = lotb3;
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = lotc3;
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = lotD3;
+
+                        //***********************************************************************************
+                        //******************************cp01**********************
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = secb4;
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = secc4;
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = secD4;
+
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = mirb4;
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = mirc4;
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = mirD4;
+
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = Trsnob4;
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = Trsnoc4;
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = TrsnoD4;
+
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = Toprnsb4;
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = Toprnsc4;
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = ToprnsD4;
+
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = stb4;
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = stc4;
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = std4;
+
+
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = lotb4;
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = lotc4;
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = lotD4;
+
+                        //*********************************************************************
+                        //********************cp02**********************
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = secb5;
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = secc5;
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = secD5;
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = mirb5;
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = mirc5;
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = mirD5;
+
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = Trsnob5;
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = Trsnoc5;
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = TrsnoD5;
+
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = Toprnsb5;
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = Toprnsc5;
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = ToprnsD5;
+
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = stb5;
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = stc5;
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = std5;
+
+
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = lotb5;
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = lotc5;
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = lotD5;
+
+                        //*********************************************************
+                        //******************cp03*********************
+
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = secb6;
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = secc6;
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = secD6;
+
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = mirb6;
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = mirc6;
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = mirD6;
+
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = Trsnob6;
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = Trsnoc6;
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = TrsnoD6;
+
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = Toprnsb6;
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = Toprnsc6;
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = ToprnsD6;
+
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = stb6;
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = stc6;
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = std6;
+
+
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = lotb6;
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = lotc6;
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = lotD6;
+
+                        //*******************CP-04*****************************
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = secb7;
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = secc7;
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = secD7;
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = mirb7;
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = mirc7;
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = mirD7;
+
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = Trsnob7;
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = Trsnoc7;
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = TrsnoD7;
+
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = Toprnsb7;
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = Toprnsc7;
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = ToprnsD7;
+
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = stb7;
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = stc7;
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = std7;
+
+
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = lotb7;
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = lotc7;
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = lotD7;
+
+                        //**********************CP-05*************************
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = secb8;
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = secc8;
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = secD8;
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = mirb8;
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = mirc8;
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = mirD8;
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = Trsnob8;
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = Trsnoc8;
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = TrsnoD8;
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = Toprnsb8;
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = Toprnsc8;
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = ToprnsD8;
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = stb8;
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = stc8;
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = std8;
+
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = lotb8;
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = lotc8;
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = lotD8;
+
+                        //****************************CP-06*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["52", CK]).Value2 = secb9;
+                        ((Excel123.Range)wrksheet.Cells["52", CL]).Value2 = secc9;
+                        ((Excel123.Range)wrksheet.Cells["52", CM]).Value2 = secD9;
+
+                        ((Excel123.Range)wrksheet.Cells["53", CK]).Value2 = mirb9;
+                        ((Excel123.Range)wrksheet.Cells["53", CL]).Value2 = mirc9;
+                        ((Excel123.Range)wrksheet.Cells["53", CM]).Value2 = mirD9;
+
+                        ((Excel123.Range)wrksheet.Cells["54", CK]).Value2 = Trsnob9;
+                        ((Excel123.Range)wrksheet.Cells["54", CL]).Value2 = Trsnoc9;
+                        ((Excel123.Range)wrksheet.Cells["54", CM]).Value2 = TrsnoD9;
+
+                        ((Excel123.Range)wrksheet.Cells["55", CK]).Value2 = Toprnsb9;
+                        ((Excel123.Range)wrksheet.Cells["55", CL]).Value2 = Toprnsc9;
+                        ((Excel123.Range)wrksheet.Cells["55", CM]).Value2 = ToprnsD9;
+
+                        ((Excel123.Range)wrksheet.Cells["56", CK]).Value2 = stb9;
+                        ((Excel123.Range)wrksheet.Cells["56", CL]).Value2 = stc9;
+                        ((Excel123.Range)wrksheet.Cells["56", CM]).Value2 = std9;
+
+
+                        ((Excel123.Range)wrksheet.Cells["57", CK]).Value2 = lotb9;
+                        ((Excel123.Range)wrksheet.Cells["57", CL]).Value2 = lotc9;
+                        ((Excel123.Range)wrksheet.Cells["57", CM]).Value2 = lotD9;
+
+                        //******************CP-07*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["58", CK]).Value2 = secb10;
+                        ((Excel123.Range)wrksheet.Cells["58", CL]).Value2 = secc10;
+                        ((Excel123.Range)wrksheet.Cells["58", CM]).Value2 = secD10;
+
+                        ((Excel123.Range)wrksheet.Cells["59", CK]).Value2 = mirb10;
+                        ((Excel123.Range)wrksheet.Cells["59", CL]).Value2 = mirc10;
+                        ((Excel123.Range)wrksheet.Cells["59", CM]).Value2 = mirD10;
+
+                        ((Excel123.Range)wrksheet.Cells["60", CK]).Value2 = Trsnob10;
+                        ((Excel123.Range)wrksheet.Cells["60", CL]).Value2 = Trsnoc10;
+                        ((Excel123.Range)wrksheet.Cells["60", CM]).Value2 = TrsnoD10;
+
+                        ((Excel123.Range)wrksheet.Cells["61", CK]).Value2 = Toprnsb10;
+                        ((Excel123.Range)wrksheet.Cells["61", CL]).Value2 = Toprnsc10;
+                        ((Excel123.Range)wrksheet.Cells["61", CM]).Value2 = ToprnsD10;
+
+                        ((Excel123.Range)wrksheet.Cells["62", CK]).Value2 = stb10;
+                        ((Excel123.Range)wrksheet.Cells["62", CL]).Value2 = stc10;
+                        ((Excel123.Range)wrksheet.Cells["62", CM]).Value2 = std10;
+
+
+                        ((Excel123.Range)wrksheet.Cells["63", CK]).Value2 = lotb10;
+                        ((Excel123.Range)wrksheet.Cells["63", CL]).Value2 = lotc10;
+                        ((Excel123.Range)wrksheet.Cells["63", CM]).Value2 = lotD10;
+
+                        //***********************CP-08******************************
+
+                        ((Excel123.Range)wrksheet.Cells["64", CK]).Value2 = secb11;
+                        ((Excel123.Range)wrksheet.Cells["64", CL]).Value2 = secc11;
+                        ((Excel123.Range)wrksheet.Cells["64", CM]).Value2 = secD11;
+
+                        ((Excel123.Range)wrksheet.Cells["65", CK]).Value2 = mirb11;
+                        ((Excel123.Range)wrksheet.Cells["65", CL]).Value2 = mirc11;
+                        ((Excel123.Range)wrksheet.Cells["65", CM]).Value2 = mirD11;
+
+                        ((Excel123.Range)wrksheet.Cells["66", CK]).Value2 = Trsnob11;
+                        ((Excel123.Range)wrksheet.Cells["66", CL]).Value2 = Trsnoc11;
+                        ((Excel123.Range)wrksheet.Cells["66", CM]).Value2 = TrsnoD11;
+
+                        ((Excel123.Range)wrksheet.Cells["67", CK]).Value2 = Toprnsb11;
+                        ((Excel123.Range)wrksheet.Cells["67", CL]).Value2 = Toprnsc11;
+                        ((Excel123.Range)wrksheet.Cells["67", CM]).Value2 = ToprnsD11;
+
+                        ((Excel123.Range)wrksheet.Cells["68", CK]).Value2 = stb11;
+                        ((Excel123.Range)wrksheet.Cells["68", CL]).Value2 = stc11;
+                        ((Excel123.Range)wrksheet.Cells["68", CM]).Value2 = std11;
+
+
+                        ((Excel123.Range)wrksheet.Cells["69", CK]).Value2 = lotb11;
+                        ((Excel123.Range)wrksheet.Cells["69", CL]).Value2 = lotc11;
+                        ((Excel123.Range)wrksheet.Cells["69", CM]).Value2 = lotD11;
+
+                        //***********************CP-09******************************
+
+                        ((Excel123.Range)wrksheet.Cells["70", CK]).Value2 = secb12;
+                        ((Excel123.Range)wrksheet.Cells["70", CL]).Value2 = secc12;
+                        ((Excel123.Range)wrksheet.Cells["70", CM]).Value2 = secD12;
+
+                        ((Excel123.Range)wrksheet.Cells["71", CK]).Value2 = mirb12;
+                        ((Excel123.Range)wrksheet.Cells["71", CL]).Value2 = mirc12;
+                        ((Excel123.Range)wrksheet.Cells["71", CM]).Value2 = mirD12;
+
+                        ((Excel123.Range)wrksheet.Cells["72", CK]).Value2 = Trsnob12;
+                        ((Excel123.Range)wrksheet.Cells["72", CL]).Value2 = Trsnoc12;
+                        ((Excel123.Range)wrksheet.Cells["72", CM]).Value2 = TrsnoD12;
+
+                        ((Excel123.Range)wrksheet.Cells["73", CK]).Value2 = Toprnsb12;
+                        ((Excel123.Range)wrksheet.Cells["73", CL]).Value2 = Toprnsc12;
+                        ((Excel123.Range)wrksheet.Cells["73", CM]).Value2 = ToprnsD12;
+
+                        ((Excel123.Range)wrksheet.Cells["74", CK]).Value2 = stb12;
+                        ((Excel123.Range)wrksheet.Cells["74", CL]).Value2 = stc12;
+                        ((Excel123.Range)wrksheet.Cells["74", CM]).Value2 = std12;
+
+
+                        ((Excel123.Range)wrksheet.Cells["75", CK]).Value2 = lotb12;
+                        ((Excel123.Range)wrksheet.Cells["75", CL]).Value2 = lotc12;
+                        ((Excel123.Range)wrksheet.Cells["75", CM]).Value2 = lotD12;
+
+                        //*********************CP-10*********************************
+
+                        ((Excel123.Range)wrksheet.Cells["76", CK]).Value2 = secb13;
+                        ((Excel123.Range)wrksheet.Cells["76", CL]).Value2 = secc13;
+                        ((Excel123.Range)wrksheet.Cells["76", CM]).Value2 = secD13;
+
+                        ((Excel123.Range)wrksheet.Cells["77", CK]).Value2 = mirb13;
+                        ((Excel123.Range)wrksheet.Cells["77", CL]).Value2 = mirc13;
+                        ((Excel123.Range)wrksheet.Cells["77", CM]).Value2 = mirD13;
+
+                        ((Excel123.Range)wrksheet.Cells["78", CK]).Value2 = Trsnob13;
+                        ((Excel123.Range)wrksheet.Cells["78", CL]).Value2 = Trsnoc13;
+                        ((Excel123.Range)wrksheet.Cells["78", CM]).Value2 = TrsnoD13;
+
+                        ((Excel123.Range)wrksheet.Cells["79", CK]).Value2 = Toprnsb13;
+                        ((Excel123.Range)wrksheet.Cells["79", CL]).Value2 = Toprnsc13;
+                        ((Excel123.Range)wrksheet.Cells["79", CM]).Value2 = ToprnsD13;
+
+                        ((Excel123.Range)wrksheet.Cells["80", CK]).Value2 = stb13;
+                        ((Excel123.Range)wrksheet.Cells["80", CL]).Value2 = stc13;
+                        ((Excel123.Range)wrksheet.Cells["80", CM]).Value2 = std13;
+
+
+                        ((Excel123.Range)wrksheet.Cells["81", CK]).Value2 = lotb13;
+                        ((Excel123.Range)wrksheet.Cells["81", CL]).Value2 = lotc13;
+                        ((Excel123.Range)wrksheet.Cells["81", CM]).Value2 = lotD13;
+
+
+                        //**********************CD22********************************
+
+
+                        ((Excel123.Range)wrksheet.Cells["82", CK]).Value2 = secb14;
+                        ((Excel123.Range)wrksheet.Cells["82", CL]).Value2 = secc14;
+                        ((Excel123.Range)wrksheet.Cells["82", CM]).Value2 = secD14;
+
+                        ((Excel123.Range)wrksheet.Cells["83", CK]).Value2 = mirb14;
+                        ((Excel123.Range)wrksheet.Cells["83", CL]).Value2 = mirc14;
+                        ((Excel123.Range)wrksheet.Cells["83", CM]).Value2 = mirD14;
+
+                        ((Excel123.Range)wrksheet.Cells["84", CK]).Value2 = Trsnob14;
+                        ((Excel123.Range)wrksheet.Cells["84", CL]).Value2 = Trsnoc14;
+                        ((Excel123.Range)wrksheet.Cells["84", CM]).Value2 = TrsnoD14;
+
+                        ((Excel123.Range)wrksheet.Cells["85", CK]).Value2 = Toprnsb14;
+                        ((Excel123.Range)wrksheet.Cells["85", CL]).Value2 = Toprnsc14;
+                        ((Excel123.Range)wrksheet.Cells["85", CM]).Value2 = ToprnsD14;
+
+                        ((Excel123.Range)wrksheet.Cells["86", CK]).Value2 = stb14;
+                        ((Excel123.Range)wrksheet.Cells["86", CL]).Value2 = stc14;
+                        ((Excel123.Range)wrksheet.Cells["86", CM]).Value2 = std14;
+
+
+                        ((Excel123.Range)wrksheet.Cells["87", CK]).Value2 = lotb14;
+                        ((Excel123.Range)wrksheet.Cells["87", CL]).Value2 = lotc14;
+                        ((Excel123.Range)wrksheet.Cells["87", CM]).Value2 = lotD14;
+
+
+
+
+
+
+                    }
+
+                    #region Dubai Plant Virtual Scheduling
+
+                    else if (lblPlantCode == "TMD1")
+                    {
+                        string scan_Date = scandate.Month + "/" + scandate.Day + "/" + scandate.Year + " " + scandate.TimeOfDay;
+
+                        //*************************************CP01***************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string sec = "", lot = "", st = "", tot = "", Trsno = "", Toprns = "";
+                        while (dr.Read())
+                        {
+                            if (!sec.Contains(dr["Mirno"].ToString()))
+                                //sec += (dr["SctDinemtion"].ToString().Remove(1, dr["SctDinemtion"].ToString().IndexOf('X')) + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                                sec += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+
+                            //lot += dr["LotCode"].ToString().Remove(5);
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+                            st += dr["OPStatus"].ToString();
+                        }
+
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            tot = dr["TWheight"].ToString();
+                            Trsno = dr["TRSNo"].ToString();
+                            Toprns = dr["TOPsn"].ToString();
+                            lot = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secC1 = "", lotC1 = "", mirC1 = "", stc1 = "", TrsnoC1 = "", ToprnsC1 = "";
+                        while (dr.Read())
+                        {
+                            if (!secC1.Contains(dr["Mirno"].ToString()))
+                                secC1 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotC1 += dr["LotCode"].ToString().Remove(5);
+                            //mirC1+= dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            stc1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirC1 = dr["TWheight"].ToString();
+                            TrsnoC1 = dr["TRSNo"].ToString();
+                            ToprnsC1 = dr["TOPsn"].ToString();
+                            lotC1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD1 = "", lotD1 = "", mirD1 = "", std1 = "";
+                        if (dr.Read())
+                        {
+                            if (!secD1.Contains(dr["Mirno"].ToString()))
+                                secD1 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD1 += dr["LotCode"].ToString().Remove(5);
+                            //lotD1 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+
+                        while (dr.Read())
+                        {
+
+                            std1 += dr["OPStatus"].ToString();
+
+
+                        }
+                        dr.Close();
+                        string TrsnoD1 = "", ToprnsD1 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD1 = dr["TWheight"].ToString();
+                            TrsnoD1 = dr["TRSNo"].ToString();
+                            ToprnsD1 = dr["TOPsn"].ToString();
+                            lotD1 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //***********************************CP02************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb2 = "", lotb2 = "", mirb2 = "", stb2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb2.Contains(dr["Mirno"].ToString()))
+                                secb2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            // lotb2 += dr["LotCode"].ToString().Remove(5);
+                            //mirb2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob2 = "", Toprnsb2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb2 = dr["TWheight"].ToString();
+                            Trsnob2 = dr["TRSNo"].ToString();
+                            Toprnsb2 = dr["TOPsn"].ToString();
+                            lotb2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc2 = "", lotc2 = "", mirc2 = "", stc2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc2.Contains(dr["Mirno"].ToString()))
+                                secc2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc2 += dr["LotCode"].ToString().Remove(5);
+                            //mirc2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc2 = "", Toprnsc2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc2 = dr["TWheight"].ToString();
+                            Trsnoc2 = dr["TRSNo"].ToString();
+                            Toprnsc2 = dr["TOPsn"].ToString();
+                            lotc2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD2 = "", lotD2 = "", mirD2 = "", std2 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD2.Contains(dr["Mirno"].ToString()))
+                                secD2 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD2 += dr["LotCode"].ToString().Remove(5);
+                            // mirD2 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std2 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD2 = "", ToprnsD2 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD2 = dr["TWheight"].ToString();
+                            TrsnoD2 = dr["TRSNo"].ToString();
+                            ToprnsD2 = dr["TOPsn"].ToString();
+                            lotD2 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //*********************************** CP03 ***********************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb3 = "", lotb3 = "", mirb3 = "", stb3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb3.Contains(dr["Mirno"].ToString()))
+                                secb3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob3 = "", Toprnsb3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb3 = dr["TWheight"].ToString();
+                            Trsnob3 = dr["TRSNo"].ToString();
+                            Toprnsb3 = dr["TOPsn"].ToString();
+                            lotb3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc3 = "", lotc3 = "", mirc3 = "", stc3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc3.Contains(dr["Mirno"].ToString()))
+                                secc3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc3 = "", Toprnsc3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc3 = dr["TWheight"].ToString();
+                            Trsnoc3 = dr["TRSNo"].ToString();
+                            Toprnsc3 = dr["TOPsn"].ToString();
+                            lotc3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD3 = "", lotD3 = "", mirD3 = "", std3 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD3.Contains(dr["Mirno"].ToString()))
+                                secD3 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std3 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD3 = "", ToprnsD3 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD3 = dr["TWheight"].ToString();
+                            TrsnoD3 = dr["TRSNo"].ToString();
+                            ToprnsD3 = dr["TOPsn"].ToString();
+                            lotD3 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //*************************************CP04*************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb4 = "", lotb4 = "", mirb4 = "", stb4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb4.Contains(dr["Mirno"].ToString()))
+                                secb4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob4 = "", Toprnsb4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb4 = dr["TWheight"].ToString();
+                            Trsnob4 = dr["TRSNo"].ToString();
+                            Toprnsb4 = dr["TOPsn"].ToString();
+                            lotb4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc4 = "", lotc4 = "", mirc4 = "", stc4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secc4.Contains(dr["Mirno"].ToString()))
+                                secc4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc4 = "", Toprnsc4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc4 = dr["TWheight"].ToString();
+                            Trsnoc4 = dr["TRSNo"].ToString();
+                            Toprnsc4 = dr["TOPsn"].ToString();
+                            lotc4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD4 = "", lotD4 = "", mirD4 = "", std4 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD4.Contains(dr["Mirno"].ToString()))
+                                secD4 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std4 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD4 = "", ToprnsD4 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP04' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD4 = dr["TWheight"].ToString();
+                            TrsnoD4 = dr["TRSNo"].ToString();
+                            ToprnsD4 = dr["TOPsn"].ToString();
+                            lotD4 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**********************************************CP05****************************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb5 = "", lotb5 = "", mirb5 = "", stb5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb5.Contains(dr["Mirno"].ToString()))
+                                secb5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob5 = "", Toprnsb5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb5 = dr["TWheight"].ToString();
+                            Trsnob5 = dr["TRSNo"].ToString();
+                            Toprnsb5 = dr["TOPsn"].ToString();
+                            lotb5 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc5 = "", lotc5 = "", mirc5 = "", stc5 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc5.Contains(dr["Mirno"].ToString()))
+                                secc5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc5 = "", Toprnsc5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc5 = dr["TWheight"].ToString();
+                            Trsnoc5 = dr["TRSNo"].ToString();
+                            Toprnsc5 = dr["TOPsn"].ToString();
+                            lotc5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD5 = "", lotD5 = "", mirD5 = "", std5 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD5.Contains(dr["Mirno"].ToString()))
+                                secD5 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std5 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD5 = "", ToprnsD5 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP05' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD5 = dr["TWheight"].ToString();
+                            TrsnoD5 = dr["TRSNo"].ToString();
+                            ToprnsD5 = dr["TOPsn"].ToString();
+                            lotD5 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //************************************** CP-06   ***********************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb6 = "", lotb6 = "", mirb6 = "", stb6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb6.Contains(dr["Mirno"].ToString()))
+                                secb6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob6 = "", Toprnsb6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb6 = dr["TWheight"].ToString();
+                            Trsnob6 = dr["TRSNo"].ToString();
+                            Toprnsb6 = dr["TOPsn"].ToString();
+                            lotb6 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc6 = "", lotc6 = "", mirc6 = "", stc6 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc6.Contains(dr["Mirno"].ToString()))
+                                secc6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc6 = "", Toprnsc6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc6 = dr["TWheight"].ToString();
+                            Trsnoc6 = dr["TRSNo"].ToString();
+                            Toprnsc6 = dr["TOPsn"].ToString();
+                            lotc6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD6 = "", lotD6 = "", mirD6 = "", std6 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD6.Contains(dr["Mirno"].ToString()))
+                                secD6 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std6 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD6 = "", ToprnsD6 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP06' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD6 = dr["TWheight"].ToString();
+                            TrsnoD6 = dr["TRSNo"].ToString();
+                            ToprnsD6 = dr["TOPsn"].ToString();
+                            lotD6 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**************************************************CP-07*******************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb7 = "", lotb7 = "", mirb7 = "", stb7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb7.Contains(dr["Mirno"].ToString()))
+                                secb7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob7 = "", Toprnsb7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb7 = dr["TWheight"].ToString();
+                            Trsnob7 = dr["TRSNo"].ToString();
+                            Toprnsb7 = dr["TOPsn"].ToString();
+                            lotb7 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc7 = "", lotc7 = "", mirc7 = "", stc7 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc7.Contains(dr["Mirno"].ToString()))
+                                secc7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc7 = "", Toprnsc7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc7 = dr["TWheight"].ToString();
+                            Trsnoc7 = dr["TRSNo"].ToString();
+                            Toprnsc7 = dr["TOPsn"].ToString();
+                            lotc7 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD7 = "", lotD7 = "", mirD7 = "", std7 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD7.Contains(dr["Mirno"].ToString()))
+                                secD7 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std7 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD7 = "", ToprnsD7 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP07' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD7 = dr["TWheight"].ToString();
+                            TrsnoD7 = dr["TRSNo"].ToString();
+                            ToprnsD7 = dr["TOPsn"].ToString();
+                            lotD7 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //****************************CD01*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb8 = "", lotb8 = "", mirb8 = "", stb8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb8.Contains(dr["Mirno"].ToString()))
+                                secb8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob8 = "", Toprnsb8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb8 = dr["TWheight"].ToString();
+                            Trsnob8 = dr["TRSNo"].ToString();
+                            Toprnsb8 = dr["TOPsn"].ToString();
+                            lotb8 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc8 = "", lotc8 = "", mirc8 = "", stc8 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc8.Contains(dr["Mirno"].ToString()))
+                                secc8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc8 = "", Toprnsc8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc8 = dr["TWheight"].ToString();
+                            Trsnoc8 = dr["TRSNo"].ToString();
+                            Toprnsc8 = dr["TOPsn"].ToString();
+                            lotc8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD8 = "", lotD8 = "", mirD8 = "", std8 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD8.Contains(dr["Mirno"].ToString()))
+                                secD8 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std8 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD8 = "", ToprnsD8 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD8 = dr["TWheight"].ToString();
+                            TrsnoD8 = dr["TRSNo"].ToString();
+                            ToprnsD8 = dr["TOPsn"].ToString();
+                            lotD8 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //****************************CD02*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb9 = "", lotb9 = "", mirb9 = "", stb9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb9.Contains(dr["Mirno"].ToString()))
+                                secb9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob9 = "", Toprnsb9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb9 = dr["TWheight"].ToString();
+                            Trsnob9 = dr["TRSNo"].ToString();
+                            Toprnsb9 = dr["TOPsn"].ToString();
+                            lotb9 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc9 = "", lotc9 = "", mirc9 = "", stc9 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc9.Contains(dr["Mirno"].ToString()))
+                                secc9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP11' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc9 = "", Toprnsc9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc9 = dr["TWheight"].ToString();
+                            Trsnoc9 = dr["TRSNo"].ToString();
+                            Toprnsc9 = dr["TOPsn"].ToString();
+                            lotc9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD9 = "", lotD9 = "", mirD9 = "", std9 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD9.Contains(dr["Mirno"].ToString()))
+                                secD9 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std9 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD9 = "", ToprnsD9 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CD02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD9 = dr["TWheight"].ToString();
+                            TrsnoD9 = dr["TRSNo"].ToString();
+                            ToprnsD9 = dr["TOPsn"].ToString();
+                            lotD9 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //*****************************kaltenbech**************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb10 = "", lotb10 = "", mirb10 = "", stb10 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb10.Contains(dr["Mirno"].ToString()))
+                                secb10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob10 = "", Toprnsb10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb10 = dr["TWheight"].ToString();
+                            Trsnob10 = dr["TRSNo"].ToString();
+                            Toprnsb10 = dr["TOPsn"].ToString();
+                            lotb10 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc10 = "", lotc10 = "", mirc10 = "", stc10 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc10.Contains(dr["Mirno"].ToString()))
+                                secc10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc10 = "", Toprnsc10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc10 = dr["TWheight"].ToString();
+                            Trsnoc10 = dr["TRSNo"].ToString();
+                            Toprnsc10 = dr["TOPsn"].ToString();
+                            lotc10 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD10 = "", lotD10 = "", mirD10 = "", std10 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD10.Contains(dr["Mirno"].ToString()))
+                                secD10 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std10 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD10 = "", ToprnsD10 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='kaltenbech' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD10 = dr["TWheight"].ToString();
+                            TrsnoD10 = dr["TRSNo"].ToString();
+                            ToprnsD10 = dr["TOPsn"].ToString();
+                            lotD10 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //**************************CG01************************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb11 = "", lotb11 = "", mirb11 = "", stb11 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb11.Contains(dr["Mirno"].ToString()))
+                                secb11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob11 = "", Toprnsb11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb11 = dr["TWheight"].ToString();
+                            Trsnob11 = dr["TRSNo"].ToString();
+                            Toprnsb11 = dr["TOPsn"].ToString();
+                            lotb11 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc11 = "", lotc11 = "", mirc11 = "", stc11 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc11.Contains(dr["Mirno"].ToString()))
+                                secc11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc11 = "", Toprnsc11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc11 = dr["TWheight"].ToString();
+                            Trsnoc11 = dr["TRSNo"].ToString();
+                            Toprnsc11 = dr["TOPsn"].ToString();
+                            lotc11 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD11 = "", lotD11 = "", mirD11 = "", std11 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD11.Contains(dr["Mirno"].ToString()))
+                                secD11 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG01' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std11 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD11 = "", ToprnsD11 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP20' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD11 = dr["TWheight"].ToString();
+                            TrsnoD11 = dr["TRSNo"].ToString();
+                            ToprnsD11 = dr["TOPsn"].ToString();
+                            lotD11 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //*****************************CG02***********************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb12 = "", lotb12 = "", mirb12 = "", stb12 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb12.Contains(dr["Mirno"].ToString()))
+                                secb12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob12 = "", Toprnsb12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb12 = dr["TWheight"].ToString();
+                            Trsnob12 = dr["TRSNo"].ToString();
+                            Toprnsb12 = dr["TOPsn"].ToString();
+                            lotb12 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc12 = "", lotc12 = "", mirc12 = "", stc12 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc12.Contains(dr["Mirno"].ToString()))
+                                secc12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc12 = "", Toprnsc12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc12 = dr["TWheight"].ToString();
+                            Trsnoc12 = dr["TRSNo"].ToString();
+                            Toprnsc12 = dr["TOPsn"].ToString();
+                            lotc12 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD12 = "", lotD12 = "", mirD12 = "", std12 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD12.Contains(dr["Mirno"].ToString()))
+                                secD12 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std12 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD12 = "", ToprnsD12 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG02' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD12 = dr["TWheight"].ToString();
+                            TrsnoD12 = dr["TRSNo"].ToString();
+                            ToprnsD12 = dr["TOPsn"].ToString();
+                            lotD12 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //*******************************CG03*****************************************
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb13 = "", lotb13 = "", mirb13 = "", stb13 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb13.Contains(dr["Mirno"].ToString()))
+                                secb13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob13 = "", Toprnsb13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb13 = dr["TWheight"].ToString();
+                            Trsnob13 = dr["TRSNo"].ToString();
+                            Toprnsb13 = dr["TOPsn"].ToString();
+                            lotb13 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc13 = "", lotc13 = "", mirc13 = "", stc13 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc13.Contains(dr["Mirno"].ToString()))
+                                secc13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc13 = "", Toprnsc13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc13 = dr["TWheight"].ToString();
+                            Trsnoc13 = dr["TRSNo"].ToString();
+                            Toprnsc13 = dr["TOPsn"].ToString();
+                            lotc13 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD13 = "", lotD13 = "", mirD13 = "", std13 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD13.Contains(dr["Mirno"].ToString()))
+                                secD13 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD13 = "", ToprnsD13 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CG03' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD13 = dr["TWheight"].ToString();
+                            TrsnoD13 = dr["TRSNo"].ToString();
+                            ToprnsD13 = dr["TOPsn"].ToString();
+                            lotD13 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+
+                        //***************************CP25*************************************
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secb14 = "", lotb14 = "", mirb14 = "", stb14 = "";
+                        while (dr.Read())
+                        {
+                            if (!secb14.Contains(dr["Mirno"].ToString()))
+                                secb14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotb3 += dr["LotCode"].ToString().Remove(5);
+                            // mirb3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stb14 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnob14 = "", Toprnsb14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='First' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirb14 = dr["TWheight"].ToString();
+                            Trsnob14 = dr["TRSNo"].ToString();
+                            Toprnsb14 = dr["TOPsn"].ToString();
+                            lotb14 = dr["LotCode"].ToString();
+                        }
+
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secc14 = "", lotc14 = "", mirc14 = "", stc14 = "";
+                        while (dr.Read())
+                        {
+
+                            if (!secc14.Contains(dr["Mirno"].ToString()))
+                                secc14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotc3 += dr["LotCode"].ToString().Remove(5);
+                            //mirc3 += dr["TotalWt"].ToString() + " / ";
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            stc14 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string Trsnoc14 = "", Toprnsc14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Second' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirc14 = dr["TWheight"].ToString();
+                            Trsnoc14 = dr["TRSNo"].ToString();
+                            Toprnsc14 = dr["TOPsn"].ToString();
+                            lotc14 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        queryadp = "SELECT distinct SctDinemtion ,LotCode ,Mirno from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        string secD14 = "", lotD14 = "", mirD14 = "", std14 = "";
+                        while (dr.Read())
+                        {
+                            if (!secD14.Contains(dr["Mirno"].ToString()))
+                                secD14 += (dr["SctDinemtion"].ToString() + "(" + dr["Mirno"].ToString() + ")").Replace(" ", "") + "(" + dr["LotCode"].ToString().Remove(5) + ")";
+                            //lotD3 += dr["LotCode"].ToString().Remove(5);
+                            //mirD3 += dr["TotalWt"].ToString() + " / ";
+
+                        }
+                        dr.Close();
+                        queryadp = "SELECT distinct OPStatus from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        while (dr.Read())
+                        {
+                            std13 += dr["OPStatus"].ToString();
+                        }
+                        dr.Close();
+                        string TrsnoD14 = "", ToprnsD14 = "";
+                        queryadp = "SELECT sum(TotalWt)as TWheight,sum(Tot_OPS) as TOPsn,count(RSNo) as TRSNo,sum(RunTime) as LotCode from Operations where PlanningDate='" + scan_Date + "' and PlanningShift='Third' and MachineName='CP25' and BP='" + lblPlantCode + "' and Flag_Fab is null ";
+                        cmd = new SqlCommand(queryadp, Conn);
+                        dr = cmd.ExecuteReader();
+                        if (dr.Read())
+                        {
+                            mirD14 = dr["TWheight"].ToString();
+                            TrsnoD14 = dr["TRSNo"].ToString();
+                            ToprnsD14 = dr["TOPsn"].ToString();
+                            lotD14 = dr["LotCode"].ToString();
+                        }
+                        dr.Close();
+
+                        //******************clear******************************************************
+
+                        //  *******CP19**************
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = "";
+
+                        //****************************************** ************************************************
+                        //  *******CP20**************
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = "";
+
+                        //***************************************************************************************
+                        //  *******CP21**************
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = "";
+
+                        //********************************************************************************************
+                        //  *******CP01**************
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = "";
+
+
+                        //********************************************************************
+                        //  *******CP02**************
+
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = "";
+
+                        //*************************************************************************************************************
+                        //  *******CP03**************
+
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = "";
+
+                        //*************************CP-04************************************
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = "";
+
+                        //***********************CP-05*****************************
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = "";
+
+                        //****************************CP-06*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["52", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["52", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["52", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["53", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["53", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["53", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["54", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["54", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["54", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["55", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["55", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["55", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["56", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["56", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["56", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["57", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["57", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["57", CM]).Value2 = "";
+
+                        //****************************** CP-07*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["58", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["58", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["58", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["59", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["59", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["59", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["60", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["60", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["60", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["61", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["61", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["61", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["62", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["62", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["62", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["63", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["63", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["63", CM]).Value2 = "";
+
+                        //***********************CP-08***********************
+
+                        ((Excel123.Range)wrksheet.Cells["64", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["64", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["64", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["65", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["65", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["65", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["66", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["66", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["66", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["67", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["67", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["67", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["68", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["68", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["68", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["69", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["69", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["69", CM]).Value2 = "";
+
+                        //***********************************CP-09****************
+
+                        ((Excel123.Range)wrksheet.Cells["70", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["70", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["70", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["71", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["71", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["71", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["72", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["72", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["72", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["73", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["73", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["73", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["74", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["74", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["74", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["75", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["75", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["75", CM]).Value2 = "";
+
+                        //*******************CP-10***************************
+
+                        ((Excel123.Range)wrksheet.Cells["76", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["76", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["76", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["77", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["77", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["77", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["78", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["78", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["78", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["79", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["79", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["79", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["80", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["80", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["80", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["81", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["81", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["81", CM]).Value2 = "";
+
+                        //***************************CD22*******************************
+
+                        ((Excel123.Range)wrksheet.Cells["82", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["82", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["82", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["83", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["83", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["83", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["84", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["84", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["84", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["85", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["85", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["85", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["86", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["86", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["86", CM]).Value2 = "";
+
+                        ((Excel123.Range)wrksheet.Cells["87", CK]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["87", CL]).Value2 = "";
+                        ((Excel123.Range)wrksheet.Cells["87", CM]).Value2 = "";
+
+
+                        //********************* insert data *********************
+                        //***************cp19
+                        ((Excel123.Range)wrksheet.Cells["1", "BI"]).Value2 = currentTime;
+                        ((Excel123.Range)wrksheet.Cells["2", CL]).Value2 = scandate;
+
+                        ((Excel123.Range)wrksheet.Cells["4", CK]).Value2 = sec;
+                        ((Excel123.Range)wrksheet.Cells["4", CL]).Value2 = secC1;
+                        ((Excel123.Range)wrksheet.Cells["4", CM]).Value2 = secD1;
+
+                        ((Excel123.Range)wrksheet.Cells["5", CK]).Value2 = tot;
+                        ((Excel123.Range)wrksheet.Cells["5", CL]).Value2 = mirC1;
+                        ((Excel123.Range)wrksheet.Cells["5", CM]).Value2 = mirD1;
+
+
+                        ((Excel123.Range)wrksheet.Cells["6", CK]).Value2 = Trsno;
+                        ((Excel123.Range)wrksheet.Cells["6", CL]).Value2 = TrsnoC1;
+                        ((Excel123.Range)wrksheet.Cells["6", CM]).Value2 = TrsnoD1;
+
+                        ((Excel123.Range)wrksheet.Cells["7", CK]).Value2 = Toprns;
+                        ((Excel123.Range)wrksheet.Cells["7", CL]).Value2 = ToprnsC1;
+                        ((Excel123.Range)wrksheet.Cells["7", CM]).Value2 = ToprnsD1;
+
+                        ((Excel123.Range)wrksheet.Cells["8", CK]).Value2 = st;
+                        ((Excel123.Range)wrksheet.Cells["8", CL]).Value2 = stc1;
+                        ((Excel123.Range)wrksheet.Cells["8", CM]).Value2 = std1;
+
+                        ((Excel123.Range)wrksheet.Cells["9", CK]).Value2 = lot;
+                        ((Excel123.Range)wrksheet.Cells["9", CL]).Value2 = lotC1;
+                        ((Excel123.Range)wrksheet.Cells["9", CM]).Value2 = lotD1;
+
+                        //**************************************************************************************
+                        //************ cp20*****************
+
+                        ((Excel123.Range)wrksheet.Cells["10", CK]).Value2 = secb2;
+                        ((Excel123.Range)wrksheet.Cells["10", CL]).Value2 = secc2;
+                        ((Excel123.Range)wrksheet.Cells["10", CM]).Value2 = secD2;
+
+
+                        ((Excel123.Range)wrksheet.Cells["11", CK]).Value2 = mirb2;
+                        ((Excel123.Range)wrksheet.Cells["11", CL]).Value2 = mirc2;
+                        ((Excel123.Range)wrksheet.Cells["11", CM]).Value2 = mirD2;
+
+                        ((Excel123.Range)wrksheet.Cells["12", CK]).Value2 = Trsnob2;
+                        ((Excel123.Range)wrksheet.Cells["12", CL]).Value2 = Trsnoc2;
+                        ((Excel123.Range)wrksheet.Cells["12", CM]).Value2 = TrsnoD2;
+
+                        ((Excel123.Range)wrksheet.Cells["13", CK]).Value2 = Toprnsb2;
+                        ((Excel123.Range)wrksheet.Cells["13", CL]).Value2 = Toprnsc2;
+                        ((Excel123.Range)wrksheet.Cells["13", CM]).Value2 = ToprnsD2;
+
+                        ((Excel123.Range)wrksheet.Cells["14", CK]).Value2 = stb2;
+                        ((Excel123.Range)wrksheet.Cells["14", CL]).Value2 = stc2;
+                        ((Excel123.Range)wrksheet.Cells["14", CM]).Value2 = std2;
+
+                        ((Excel123.Range)wrksheet.Cells["15", CK]).Value2 = lotb2;
+                        ((Excel123.Range)wrksheet.Cells["15", CL]).Value2 = lotc2;
+                        ((Excel123.Range)wrksheet.Cells["15", CM]).Value2 = lotD2;
+
+                        //**************************************************************************************
+                        //**************cp21****************
+                        ((Excel123.Range)wrksheet.Cells["16", CK]).Value2 = secb3;
+                        ((Excel123.Range)wrksheet.Cells["16", CL]).Value2 = secc3;
+                        ((Excel123.Range)wrksheet.Cells["16", CM]).Value2 = secD3;
+
+                        ((Excel123.Range)wrksheet.Cells["17", CK]).Value2 = mirb3;
+                        ((Excel123.Range)wrksheet.Cells["17", CL]).Value2 = mirc3;
+                        ((Excel123.Range)wrksheet.Cells["17", CM]).Value2 = mirD3;
+
+                        ((Excel123.Range)wrksheet.Cells["18", CK]).Value2 = Trsnob3;
+                        ((Excel123.Range)wrksheet.Cells["18", CL]).Value2 = Trsnoc3;
+                        ((Excel123.Range)wrksheet.Cells["18", CM]).Value2 = TrsnoD3;
+
+                        ((Excel123.Range)wrksheet.Cells["19", CK]).Value2 = Toprnsb3;
+                        ((Excel123.Range)wrksheet.Cells["19", CL]).Value2 = Toprnsc3;
+                        ((Excel123.Range)wrksheet.Cells["19", CM]).Value2 = ToprnsD3;
+
+                        ((Excel123.Range)wrksheet.Cells["20", CK]).Value2 = stb3;
+                        ((Excel123.Range)wrksheet.Cells["20", CL]).Value2 = stc3;
+                        ((Excel123.Range)wrksheet.Cells["20", CM]).Value2 = std3;
+
+
+                        ((Excel123.Range)wrksheet.Cells["21", CK]).Value2 = lotb3;
+                        ((Excel123.Range)wrksheet.Cells["21", CL]).Value2 = lotc3;
+                        ((Excel123.Range)wrksheet.Cells["21", CM]).Value2 = lotD3;
+
+                        //***********************************************************************************
+                        //******************************cp01**********************
+                        ((Excel123.Range)wrksheet.Cells["22", CK]).Value2 = secb4;
+                        ((Excel123.Range)wrksheet.Cells["22", CL]).Value2 = secc4;
+                        ((Excel123.Range)wrksheet.Cells["22", CM]).Value2 = secD4;
+
+                        ((Excel123.Range)wrksheet.Cells["23", CK]).Value2 = mirb4;
+                        ((Excel123.Range)wrksheet.Cells["23", CL]).Value2 = mirc4;
+                        ((Excel123.Range)wrksheet.Cells["23", CM]).Value2 = mirD4;
+
+                        ((Excel123.Range)wrksheet.Cells["24", CK]).Value2 = Trsnob4;
+                        ((Excel123.Range)wrksheet.Cells["24", CL]).Value2 = Trsnoc4;
+                        ((Excel123.Range)wrksheet.Cells["24", CM]).Value2 = TrsnoD4;
+
+                        ((Excel123.Range)wrksheet.Cells["25", CK]).Value2 = Toprnsb4;
+                        ((Excel123.Range)wrksheet.Cells["25", CL]).Value2 = Toprnsc4;
+                        ((Excel123.Range)wrksheet.Cells["25", CM]).Value2 = ToprnsD4;
+
+                        ((Excel123.Range)wrksheet.Cells["26", CK]).Value2 = stb4;
+                        ((Excel123.Range)wrksheet.Cells["26", CL]).Value2 = stc4;
+                        ((Excel123.Range)wrksheet.Cells["26", CM]).Value2 = std4;
+
+
+                        ((Excel123.Range)wrksheet.Cells["27", CK]).Value2 = lotb4;
+                        ((Excel123.Range)wrksheet.Cells["27", CL]).Value2 = lotc4;
+                        ((Excel123.Range)wrksheet.Cells["27", CM]).Value2 = lotD4;
+
+                        //*********************************************************************
+                        //********************cp02**********************
+                        ((Excel123.Range)wrksheet.Cells["28", CK]).Value2 = secb5;
+                        ((Excel123.Range)wrksheet.Cells["28", CL]).Value2 = secc5;
+                        ((Excel123.Range)wrksheet.Cells["28", CM]).Value2 = secD5;
+
+                        ((Excel123.Range)wrksheet.Cells["29", CK]).Value2 = mirb5;
+                        ((Excel123.Range)wrksheet.Cells["29", CL]).Value2 = mirc5;
+                        ((Excel123.Range)wrksheet.Cells["29", CM]).Value2 = mirD5;
+
+                        ((Excel123.Range)wrksheet.Cells["30", CK]).Value2 = Trsnob5;
+                        ((Excel123.Range)wrksheet.Cells["30", CL]).Value2 = Trsnoc5;
+                        ((Excel123.Range)wrksheet.Cells["30", CM]).Value2 = TrsnoD5;
+
+                        ((Excel123.Range)wrksheet.Cells["31", CK]).Value2 = Toprnsb5;
+                        ((Excel123.Range)wrksheet.Cells["31", CL]).Value2 = Toprnsc5;
+                        ((Excel123.Range)wrksheet.Cells["31", CM]).Value2 = ToprnsD5;
+
+                        ((Excel123.Range)wrksheet.Cells["32", CK]).Value2 = stb5;
+                        ((Excel123.Range)wrksheet.Cells["32", CL]).Value2 = stc5;
+                        ((Excel123.Range)wrksheet.Cells["32", CM]).Value2 = std5;
+
+
+                        ((Excel123.Range)wrksheet.Cells["33", CK]).Value2 = lotb5;
+                        ((Excel123.Range)wrksheet.Cells["33", CL]).Value2 = lotc5;
+                        ((Excel123.Range)wrksheet.Cells["33", CM]).Value2 = lotD5;
+
+                        //*********************************************************
+                        //******************cp03*********************
+
+                        ((Excel123.Range)wrksheet.Cells["34", CK]).Value2 = secb6;
+                        ((Excel123.Range)wrksheet.Cells["34", CL]).Value2 = secc6;
+                        ((Excel123.Range)wrksheet.Cells["34", CM]).Value2 = secD6;
+
+                        ((Excel123.Range)wrksheet.Cells["35", CK]).Value2 = mirb6;
+                        ((Excel123.Range)wrksheet.Cells["35", CL]).Value2 = mirc6;
+                        ((Excel123.Range)wrksheet.Cells["35", CM]).Value2 = mirD6;
+
+                        ((Excel123.Range)wrksheet.Cells["36", CK]).Value2 = Trsnob6;
+                        ((Excel123.Range)wrksheet.Cells["36", CL]).Value2 = Trsnoc6;
+                        ((Excel123.Range)wrksheet.Cells["36", CM]).Value2 = TrsnoD6;
+
+                        ((Excel123.Range)wrksheet.Cells["37", CK]).Value2 = Toprnsb6;
+                        ((Excel123.Range)wrksheet.Cells["37", CL]).Value2 = Toprnsc6;
+                        ((Excel123.Range)wrksheet.Cells["37", CM]).Value2 = ToprnsD6;
+
+                        ((Excel123.Range)wrksheet.Cells["38", CK]).Value2 = stb6;
+                        ((Excel123.Range)wrksheet.Cells["38", CL]).Value2 = stc6;
+                        ((Excel123.Range)wrksheet.Cells["38", CM]).Value2 = std6;
+
+
+                        ((Excel123.Range)wrksheet.Cells["39", CK]).Value2 = lotb6;
+                        ((Excel123.Range)wrksheet.Cells["39", CL]).Value2 = lotc6;
+                        ((Excel123.Range)wrksheet.Cells["39", CM]).Value2 = lotD6;
+
+                        //*******************CP-04*****************************
+
+                        ((Excel123.Range)wrksheet.Cells["40", CK]).Value2 = secb7;
+                        ((Excel123.Range)wrksheet.Cells["40", CL]).Value2 = secc7;
+                        ((Excel123.Range)wrksheet.Cells["40", CM]).Value2 = secD7;
+
+                        ((Excel123.Range)wrksheet.Cells["41", CK]).Value2 = mirb7;
+                        ((Excel123.Range)wrksheet.Cells["41", CL]).Value2 = mirc7;
+                        ((Excel123.Range)wrksheet.Cells["41", CM]).Value2 = mirD7;
+
+                        ((Excel123.Range)wrksheet.Cells["42", CK]).Value2 = Trsnob7;
+                        ((Excel123.Range)wrksheet.Cells["42", CL]).Value2 = Trsnoc7;
+                        ((Excel123.Range)wrksheet.Cells["42", CM]).Value2 = TrsnoD7;
+
+                        ((Excel123.Range)wrksheet.Cells["43", CK]).Value2 = Toprnsb7;
+                        ((Excel123.Range)wrksheet.Cells["43", CL]).Value2 = Toprnsc7;
+                        ((Excel123.Range)wrksheet.Cells["43", CM]).Value2 = ToprnsD7;
+
+                        ((Excel123.Range)wrksheet.Cells["44", CK]).Value2 = stb7;
+                        ((Excel123.Range)wrksheet.Cells["44", CL]).Value2 = stc7;
+                        ((Excel123.Range)wrksheet.Cells["44", CM]).Value2 = std7;
+
+
+                        ((Excel123.Range)wrksheet.Cells["45", CK]).Value2 = lotb7;
+                        ((Excel123.Range)wrksheet.Cells["45", CL]).Value2 = lotc7;
+                        ((Excel123.Range)wrksheet.Cells["45", CM]).Value2 = lotD7;
+
+                        //**********************CP-05*************************
+                        ((Excel123.Range)wrksheet.Cells["46", CK]).Value2 = secb8;
+                        ((Excel123.Range)wrksheet.Cells["46", CL]).Value2 = secc8;
+                        ((Excel123.Range)wrksheet.Cells["46", CM]).Value2 = secD8;
+
+                        ((Excel123.Range)wrksheet.Cells["47", CK]).Value2 = mirb8;
+                        ((Excel123.Range)wrksheet.Cells["47", CL]).Value2 = mirc8;
+                        ((Excel123.Range)wrksheet.Cells["47", CM]).Value2 = mirD8;
+
+                        ((Excel123.Range)wrksheet.Cells["48", CK]).Value2 = Trsnob8;
+                        ((Excel123.Range)wrksheet.Cells["48", CL]).Value2 = Trsnoc8;
+                        ((Excel123.Range)wrksheet.Cells["48", CM]).Value2 = TrsnoD8;
+
+                        ((Excel123.Range)wrksheet.Cells["49", CK]).Value2 = Toprnsb8;
+                        ((Excel123.Range)wrksheet.Cells["49", CL]).Value2 = Toprnsc8;
+                        ((Excel123.Range)wrksheet.Cells["49", CM]).Value2 = ToprnsD8;
+
+                        ((Excel123.Range)wrksheet.Cells["50", CK]).Value2 = stb8;
+                        ((Excel123.Range)wrksheet.Cells["50", CL]).Value2 = stc8;
+                        ((Excel123.Range)wrksheet.Cells["50", CM]).Value2 = std8;
+
+
+                        ((Excel123.Range)wrksheet.Cells["51", CK]).Value2 = lotb8;
+                        ((Excel123.Range)wrksheet.Cells["51", CL]).Value2 = lotc8;
+                        ((Excel123.Range)wrksheet.Cells["51", CM]).Value2 = lotD8;
+
+                        //****************************CP-06*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["52", CK]).Value2 = secb9;
+                        ((Excel123.Range)wrksheet.Cells["52", CL]).Value2 = secc9;
+                        ((Excel123.Range)wrksheet.Cells["52", CM]).Value2 = secD9;
+
+                        ((Excel123.Range)wrksheet.Cells["53", CK]).Value2 = mirb9;
+                        ((Excel123.Range)wrksheet.Cells["53", CL]).Value2 = mirc9;
+                        ((Excel123.Range)wrksheet.Cells["53", CM]).Value2 = mirD9;
+
+                        ((Excel123.Range)wrksheet.Cells["54", CK]).Value2 = Trsnob9;
+                        ((Excel123.Range)wrksheet.Cells["54", CL]).Value2 = Trsnoc9;
+                        ((Excel123.Range)wrksheet.Cells["54", CM]).Value2 = TrsnoD9;
+
+                        ((Excel123.Range)wrksheet.Cells["55", CK]).Value2 = Toprnsb9;
+                        ((Excel123.Range)wrksheet.Cells["55", CL]).Value2 = Toprnsc9;
+                        ((Excel123.Range)wrksheet.Cells["55", CM]).Value2 = ToprnsD9;
+
+                        ((Excel123.Range)wrksheet.Cells["56", CK]).Value2 = stb9;
+                        ((Excel123.Range)wrksheet.Cells["56", CL]).Value2 = stc9;
+                        ((Excel123.Range)wrksheet.Cells["56", CM]).Value2 = std9;
+
+
+                        ((Excel123.Range)wrksheet.Cells["57", CK]).Value2 = lotb9;
+                        ((Excel123.Range)wrksheet.Cells["57", CL]).Value2 = lotc9;
+                        ((Excel123.Range)wrksheet.Cells["57", CM]).Value2 = lotD9;
+
+                        //******************CP-07*****************************************
+
+                        ((Excel123.Range)wrksheet.Cells["58", CK]).Value2 = secb10;
+                        ((Excel123.Range)wrksheet.Cells["58", CL]).Value2 = secc10;
+                        ((Excel123.Range)wrksheet.Cells["58", CM]).Value2 = secD10;
+
+                        ((Excel123.Range)wrksheet.Cells["59", CK]).Value2 = mirb10;
+                        ((Excel123.Range)wrksheet.Cells["59", CL]).Value2 = mirc10;
+                        ((Excel123.Range)wrksheet.Cells["59", CM]).Value2 = mirD10;
+
+                        ((Excel123.Range)wrksheet.Cells["60", CK]).Value2 = Trsnob10;
+                        ((Excel123.Range)wrksheet.Cells["60", CL]).Value2 = Trsnoc10;
+                        ((Excel123.Range)wrksheet.Cells["60", CM]).Value2 = TrsnoD10;
+
+                        ((Excel123.Range)wrksheet.Cells["61", CK]).Value2 = Toprnsb10;
+                        ((Excel123.Range)wrksheet.Cells["61", CL]).Value2 = Toprnsc10;
+                        ((Excel123.Range)wrksheet.Cells["61", CM]).Value2 = ToprnsD10;
+
+                        ((Excel123.Range)wrksheet.Cells["62", CK]).Value2 = stb10;
+                        ((Excel123.Range)wrksheet.Cells["62", CL]).Value2 = stc10;
+                        ((Excel123.Range)wrksheet.Cells["62", CM]).Value2 = std10;
+
+
+                        ((Excel123.Range)wrksheet.Cells["63", CK]).Value2 = lotb10;
+                        ((Excel123.Range)wrksheet.Cells["63", CL]).Value2 = lotc10;
+                        ((Excel123.Range)wrksheet.Cells["63", CM]).Value2 = lotD10;
+
+                        //***********************CP-08******************************
+
+                        ((Excel123.Range)wrksheet.Cells["64", CK]).Value2 = secb11;
+                        ((Excel123.Range)wrksheet.Cells["64", CL]).Value2 = secc11;
+                        ((Excel123.Range)wrksheet.Cells["64", CM]).Value2 = secD11;
+
+                        ((Excel123.Range)wrksheet.Cells["65", CK]).Value2 = mirb11;
+                        ((Excel123.Range)wrksheet.Cells["65", CL]).Value2 = mirc11;
+                        ((Excel123.Range)wrksheet.Cells["65", CM]).Value2 = mirD11;
+
+                        ((Excel123.Range)wrksheet.Cells["66", CK]).Value2 = Trsnob11;
+                        ((Excel123.Range)wrksheet.Cells["66", CL]).Value2 = Trsnoc11;
+                        ((Excel123.Range)wrksheet.Cells["66", CM]).Value2 = TrsnoD11;
+
+                        ((Excel123.Range)wrksheet.Cells["67", CK]).Value2 = Toprnsb11;
+                        ((Excel123.Range)wrksheet.Cells["67", CL]).Value2 = Toprnsc11;
+                        ((Excel123.Range)wrksheet.Cells["67", CM]).Value2 = ToprnsD11;
+
+                        ((Excel123.Range)wrksheet.Cells["68", CK]).Value2 = stb11;
+                        ((Excel123.Range)wrksheet.Cells["68", CL]).Value2 = stc11;
+                        ((Excel123.Range)wrksheet.Cells["68", CM]).Value2 = std11;
+
+
+                        ((Excel123.Range)wrksheet.Cells["69", CK]).Value2 = lotb11;
+                        ((Excel123.Range)wrksheet.Cells["69", CL]).Value2 = lotc11;
+                        ((Excel123.Range)wrksheet.Cells["69", CM]).Value2 = lotD11;
+
+                        //***********************CP-09******************************
+
+                        ((Excel123.Range)wrksheet.Cells["70", CK]).Value2 = secb12;
+                        ((Excel123.Range)wrksheet.Cells["70", CL]).Value2 = secc12;
+                        ((Excel123.Range)wrksheet.Cells["70", CM]).Value2 = secD12;
+
+                        ((Excel123.Range)wrksheet.Cells["71", CK]).Value2 = mirb12;
+                        ((Excel123.Range)wrksheet.Cells["71", CL]).Value2 = mirc12;
+                        ((Excel123.Range)wrksheet.Cells["71", CM]).Value2 = mirD12;
+
+                        ((Excel123.Range)wrksheet.Cells["72", CK]).Value2 = Trsnob12;
+                        ((Excel123.Range)wrksheet.Cells["72", CL]).Value2 = Trsnoc12;
+                        ((Excel123.Range)wrksheet.Cells["72", CM]).Value2 = TrsnoD12;
+
+                        ((Excel123.Range)wrksheet.Cells["73", CK]).Value2 = Toprnsb12;
+                        ((Excel123.Range)wrksheet.Cells["73", CL]).Value2 = Toprnsc12;
+                        ((Excel123.Range)wrksheet.Cells["73", CM]).Value2 = ToprnsD12;
+
+                        ((Excel123.Range)wrksheet.Cells["74", CK]).Value2 = stb12;
+                        ((Excel123.Range)wrksheet.Cells["74", CL]).Value2 = stc12;
+                        ((Excel123.Range)wrksheet.Cells["74", CM]).Value2 = std12;
+
+
+                        ((Excel123.Range)wrksheet.Cells["75", CK]).Value2 = lotb12;
+                        ((Excel123.Range)wrksheet.Cells["75", CL]).Value2 = lotc12;
+                        ((Excel123.Range)wrksheet.Cells["75", CM]).Value2 = lotD12;
+
+                        //*********************CP-10*********************************
+
+                        ((Excel123.Range)wrksheet.Cells["76", CK]).Value2 = secb13;
+                        ((Excel123.Range)wrksheet.Cells["76", CL]).Value2 = secc13;
+                        ((Excel123.Range)wrksheet.Cells["76", CM]).Value2 = secD13;
+
+                        ((Excel123.Range)wrksheet.Cells["77", CK]).Value2 = mirb13;
+                        ((Excel123.Range)wrksheet.Cells["77", CL]).Value2 = mirc13;
+                        ((Excel123.Range)wrksheet.Cells["77", CM]).Value2 = mirD13;
+
+                        ((Excel123.Range)wrksheet.Cells["78", CK]).Value2 = Trsnob13;
+                        ((Excel123.Range)wrksheet.Cells["78", CL]).Value2 = Trsnoc13;
+                        ((Excel123.Range)wrksheet.Cells["78", CM]).Value2 = TrsnoD13;
+
+                        ((Excel123.Range)wrksheet.Cells["79", CK]).Value2 = Toprnsb13;
+                        ((Excel123.Range)wrksheet.Cells["79", CL]).Value2 = Toprnsc13;
+                        ((Excel123.Range)wrksheet.Cells["79", CM]).Value2 = ToprnsD13;
+
+                        ((Excel123.Range)wrksheet.Cells["80", CK]).Value2 = stb13;
+                        ((Excel123.Range)wrksheet.Cells["80", CL]).Value2 = stc13;
+                        ((Excel123.Range)wrksheet.Cells["80", CM]).Value2 = std13;
+
+
+                        ((Excel123.Range)wrksheet.Cells["81", CK]).Value2 = lotb13;
+                        ((Excel123.Range)wrksheet.Cells["81", CL]).Value2 = lotc13;
+                        ((Excel123.Range)wrksheet.Cells["81", CM]).Value2 = lotD13;
+
+
+                        //**********************CD22********************************
+
+
+                        ((Excel123.Range)wrksheet.Cells["82", CK]).Value2 = secb14;
+                        ((Excel123.Range)wrksheet.Cells["82", CL]).Value2 = secc14;
+                        ((Excel123.Range)wrksheet.Cells["82", CM]).Value2 = secD14;
+
+                        ((Excel123.Range)wrksheet.Cells["83", CK]).Value2 = mirb14;
+                        ((Excel123.Range)wrksheet.Cells["83", CL]).Value2 = mirc14;
+                        ((Excel123.Range)wrksheet.Cells["83", CM]).Value2 = mirD14;
+
+                        ((Excel123.Range)wrksheet.Cells["84", CK]).Value2 = Trsnob14;
+                        ((Excel123.Range)wrksheet.Cells["84", CL]).Value2 = Trsnoc14;
+                        ((Excel123.Range)wrksheet.Cells["84", CM]).Value2 = TrsnoD14;
+
+                        ((Excel123.Range)wrksheet.Cells["85", CK]).Value2 = Toprnsb14;
+                        ((Excel123.Range)wrksheet.Cells["85", CL]).Value2 = Toprnsc14;
+                        ((Excel123.Range)wrksheet.Cells["85", CM]).Value2 = ToprnsD14;
+
+                        ((Excel123.Range)wrksheet.Cells["86", CK]).Value2 = stb14;
+                        ((Excel123.Range)wrksheet.Cells["86", CL]).Value2 = stc14;
+                        ((Excel123.Range)wrksheet.Cells["86", CM]).Value2 = std14;
+
+
+                        ((Excel123.Range)wrksheet.Cells["87", CK]).Value2 = lotb14;
+                        ((Excel123.Range)wrksheet.Cells["87", CL]).Value2 = lotc14;
+                        ((Excel123.Range)wrksheet.Cells["87", CM]).Value2 = lotD14;
+ 
+                    }
+                    #endregion
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(ex.ToString());
+            }
+            finally
+            {
+
+                workbook.Save();
+                workbook.Close(0, 0, 0);
+                excelApp.Quit();
+                Conn.Close();
+                System.Diagnostics.Process.Start(exc);
+            }
+            return Ok("Ok");
+        }
+
+
+
 
         ////GET api/values/5
         //[HttpGet("{id}")]

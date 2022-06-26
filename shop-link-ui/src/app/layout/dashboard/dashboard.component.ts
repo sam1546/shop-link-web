@@ -20,25 +20,6 @@ import { stringify } from 'querystring';
 })
 
 export class DashboardComponent implements OnInit {
-
-  constructor(private modalService: NgbModal,
-    private http: HttpClient,
-    public router: Router,
-    private dashboardservice: DashboardService,
-    public notificationMessages: ToastrManager) {
-
-    if (localStorage.getItem('isLoggedin') == 'true') {
-      this.loggedInUserName = localStorage.getItem('userName');
-      //loading group data at page load
-      this.loadGroups();
-      // this.bindDataGridALLRecords('000080000014','TM02')
-    }
-    else {
-      this.notificationMessages.errorToastr('Session logged out!! Please login again!!')
-      this.router.navigate(['/login']);
-    }
-  }
-
   waitSpinner = true;
   showSpinner = false;
   barcode: string = '';
@@ -54,12 +35,28 @@ export class DashboardComponent implements OnInit {
   plantCode = localStorage.getItem("plantcode")
   poType: string = ''
   productionDetails: ProductionModel;
-  ngOnInit(): void {
 
+  constructor(private modalService: NgbModal,
+    private http: HttpClient,
+    public router: Router,
+    private dashboardservice: DashboardService,
+    public notificationMessages: ToastrManager) {
+    if (localStorage.getItem('isLoggedin') == 'true') {
+      this.loggedInUserName = localStorage.getItem('userName');
+      //loading group data at page load
+      this.loadGroups();
+      // this.bindDataGridALLRecords('000080000014','TM02')
+    }
+    else {
+      this.notificationMessages.errorToastr('Session logged out!! Please login again!!')
+      this.router.navigate(['/login']);
+    }
+  }
+
+  ngOnInit(): void { 
   }
   onEnter() {
     this.findDB();
-
   }
 
   optionSelectedGroup = 'null';
@@ -129,6 +126,7 @@ export class DashboardComponent implements OnInit {
       this.notificationMessages.errorToastr("Enter valid MIR number");
       return
     }
+    debugger
     this.dashboardservice.getBpByMirno(this.txtAckMirno).subscribe((data: Response) => {
       var bp1 = data
       if (bp1 != this.section1) {
@@ -561,8 +559,12 @@ export class DashboardComponent implements OnInit {
     this.notificationMessages.errorToastr("Work in progress");
   }
 
+  dateTimePicker1: string ="";
   onShop1(){
-    this.notificationMessages.errorToastr("Work in progress");
+    console.log(this.dateTimePicker1); 
+    this.dashboardservice.shop1(this.plantCode).subscribe(result => {
+      console.log(result); 
+    });
   }
 
   onButton1click(){

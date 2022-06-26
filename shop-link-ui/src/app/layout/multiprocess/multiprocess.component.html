@@ -5,7 +5,7 @@
             <br /><br /> <br />
             <div class="container" style="background-color: #F4F5F1; font-size: 12px; height: 500px; border: 1px solid #d7e4b2;">
                 <div class="row">
-                    <textarea name="text_area_comment" style="height: 500px; resize:none;" placeholder="Enter text here..."></textarea>
+                    <textarea name="text_area_comment" [(ngModel)]="richTextBox1" style="height: 500px; resize:none;" placeholder="Enter text here..."></textarea>
                 </div> 
             </div>
         </div>
@@ -22,7 +22,7 @@
 
                     <div class="form-group row"  style=" background-color: #F4F5F1; font-size: 12px; height: 50px; border: 1px solid #d7e4b2;">
                         <div class="col-sm-1" style="margin-top: 10px;">
-                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button"> <i
+                            <button style="font-size: 12px;" class="btn btn-sm btn-primary" type="button" (click)="onReversePOClick()"> <i
                                     class="fa fa-reply"></i>
                                 Rev.PO</button>&nbsp;
                         </div>
